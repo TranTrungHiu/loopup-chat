@@ -1,0 +1,224 @@
+.container {
+  background: conic-gradient(
+    from 183deg at 48.44% 61.96%,
+    #9776e4db 92.59deg,
+    #fffda2db 178.69deg,
+    #5a80ffdb 269.34deg,
+    #e2e5a8db 356.36deg
+  );
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 20px;
+  display: flex;
+}
+@media (width<=991px) {
+  .container {
+    max-width: 991px;
+  }
+}
+@media (width<=640px) {
+  .container {
+    max-width: 640px;
+  }
+}
+.formCard {
+  background-color: #fbfbfbfa;
+  border-radius: 30px;
+  width: 100%;
+  max-width: 1048px;
+  padding: 40px;
+  position: relative;
+  box-shadow: 0 4px 5px #00000040;
+}
+@media (width<=991px) {
+  .formCard {
+    padding: 20px;
+  }
+}
+.logoImage {
+  object-fit: contain;
+  width: 276px;
+  height: 276px;
+}
+.formContainer {
+  max-width: 600px;
+  margin: 0 auto;
+  position: relative;
+}
+.formTitle {
+  color: #080f8c;
+  text-align: center;
+  margin-bottom: 40px;
+  font-family: Rowdies, cursive;
+  font-size: 45px;
+}
+@media (width<=640px) {
+  .formTitle {
+    font-size: 32px;
+  }
+}
+.formFields {
+  flex-direction: column;
+  gap: 20px;
+  display: flex;
+}
+.nameFieldsRow {
+  gap: 20px;
+  display: flex;
+}
+@media (width<=991px) {
+  .nameFieldsRow {
+    flex-direction: column;
+  }
+}
+.inputWrapper {
+  flex: 1;
+  position: relative;
+}
+.input {
+  color: #00000069;
+  background-color: #fff;
+  border: 1px solid #92b7d6;
+  border-radius: 20px;
+  width: 100%;
+  padding: 17px;
+  font-family:
+    Public Sans,
+    sans-serif;
+  font-size: 18px;
+  box-shadow: inset 0 4px 4px #00000040;
+}
+@media (width<=640px) {
+  .input {
+    font-size: 16px;
+  }
+}
+.genderSelection {
+  align-items: center;
+  gap: 20px;
+  display: flex;
+}
+.genderLabel {
+  color: #00000036;
+  font-family:
+    Public Sans,
+    sans-serif;
+  font-size: 18px;
+}
+.genderOptions {
+  gap: 40px;
+  display: flex;
+}
+@media (width<=640px) {
+  .genderOptions {
+    flex-direction: column;
+    gap: 20px;
+  }
+}
+.genderOption {
+  align-items: center;
+  gap: 10px;
+  display: flex;
+}
+.genderText {
+  font-family:
+    Public Sans,
+    sans-serif;
+  font-size: 18px;
+}
+.passwordFieldsRow {
+  gap: 20px;
+  display: flex;
+}
+@media (width<=991px) {
+  .passwordFieldsRow {
+    flex-direction: column;
+  }
+}
+.termsCheckbox {
+  align-items: center;
+  gap: 10px;
+  display: flex;
+}
+.checkboxLabel {
+  background-color: #fff;
+  border: 1px solid #000;
+  width: 20px;
+  height: 20px;
+  position: relative;
+}
+.termsText {
+  color: #382e7c;
+  font-family:
+    Public Sans,
+    sans-serif;
+  font-size: 14px;
+}
+.termsLink {
+  text-decoration: underline;
+}
+.submitButton {
+  cursor: pointer;
+  background-color: #09003f;
+  border: 1px solid #292929;
+  border-radius: 9999px;
+  width: 199px;
+  height: 59px;
+  margin: 20px auto;
+  position: relative;
+  box-shadow:
+    0 2px 4px #000,
+    0 10px 20px #0006;
+}
+@media (width<=640px) {
+  .submitButton {
+    width: 100%;
+  }
+}
+.buttonContent {
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  display: flex;
+}
+.buttonText {
+  color: #fff;
+  font-family: Roboto, sans-serif;
+  font-size: 17.6px;
+  font-weight: 700;
+}
+.arrowContainer {
+  background-color: #5708ffc9;
+  border-radius: 20px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  display: flex;
+}
+.loginPrompt {
+  text-align: center;
+  font-family:
+    Public Sans,
+    sans-serif;
+  font-size: 15px;
+}
+.loginLink {
+  color: #675b00;
+  cursor: pointer;
+}
+.avatarUpload {
+  margin-top: 16px;
+}
+
+.avatarLabel {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: #333;
+}
