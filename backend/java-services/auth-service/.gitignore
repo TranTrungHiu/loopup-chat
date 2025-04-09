@@ -31,3 +31,14 @@ build/
 
 ### VS Code ###
 .vscode/
+/build/
+/dist/
+/node_modules/
+/target/
+/.gradle/
+/.idea/
+/.project
+/.classpath 
+/.settings
+/.factorypath
+
