@@ -4,23 +4,116 @@
       "Hiragino Sans GB", "Microsoft Yahei UI", "Microsoft Yahei",
       "Source Han Sans CN", sans-serif;
   }
-  
+
   .main-container {
     overflow: hidden;
   }
-  
+
   .main-container,
   .main-container * {
     box-sizing: border-box;
   }
-  
   input,
   select,
   textarea,
   button {
     outline: 0;
   }
-  
+.heart-container {
+  --heart-color: rgb(255, 91, 137);
+  position: absolute;
+  width: 150px;
+  height: 30px;
+  transition: .1s;
+  top: 260px;
+  left: 50px;
+}
+
+.heart-container .checkbox {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  z-index: 20;
+  cursor: pointer;
+}
+.text-check {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 35px;
+  top:8px;
+  font-family: Public Sans, var(--default-font-family);
+
+}
+.heart-container .svg-container {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.heart-container .svg-outline,
+.heart-container .svg-filled {
+  fill: var(--heart-color);
+  position: absolute;
+}
+
+.heart-container .svg-filled {
+  animation: keyframes-svg-filled 1s;
+  display: none;
+}
+
+.heart-container .svg-celebrate {
+  position: absolute;
+  animation: keyframes-svg-celebrate .5s;
+  animation-fill-mode: forwards;
+  display: none;
+  stroke: var(--heart-color);
+  fill: var(--heart-color);
+  stroke-width: 2px;
+}
+
+.heart-container .checkbox:checked~.svg-container .svg-filled {
+  display: block
+}
+
+.heart-container .checkbox:checked~.svg-container .svg-celebrate {
+  display: block
+}
+
+@keyframes keyframes-svg-filled {
+  0% {
+    transform: scale(0);
+  }
+
+  25% {
+    transform: scale(1.2);
+  }
+
+  50% {
+    transform: scale(1);
+    filter: brightness(1.5);
+  }
+}
+
+@keyframes keyframes-svg-celebrate {
+  0% {
+    transform: scale(0);
+  }
+
+  50% {
+    opacity: 1;
+    filter: brightness(1.5);
+  }
+
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+    display: none;
+  }
+}
   .main-container {
     position: relative;
     width: 1280px;
@@ -42,7 +135,7 @@
     width: 276px;
     height: 276px;
     margin: 196px 0 0 22px;
-    background: url(https://static.codia.ai/custom_image/2025-04-09/023407/profile-image.png)
+    background: url(../img-svg/logo.png)
       no-repeat center;
     background-size: cover;
     z-index: 22;
@@ -54,7 +147,6 @@
     top: 89px;
     left: 119px;
     background: rgba(250, 250, 250, 0.98);
-    z-index: 1;
     border-radius: 30px;
   }
   .box-2 {
@@ -64,58 +156,34 @@
     top: 89px;
     left: 374px;
     background: rgba(255, 255, 255, 0.98);
-    z-index: 2;
+
     border-radius: 30px;
     box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.25);
   }
-  .section {
-    position: relative;
-    width: 507px;
-    height: 445px;
-    margin: 124px 0 0 184px;
-    z-index: 29;
-  }
+
   .img-2 {
     position: absolute;
     width: 430px;
     height: 430px;
     top: 0;
     left: 77px;
-    background: url(https://static.codia.ai/custom_image/2025-04-09/023407/background-pattern.png)
+    background: url(../img-svg/logo-chim.png)
       no-repeat center;
     background-size: cover;
-    opacity: 0.1;
-    z-index: 23;
+
   }
-  .text {
-    display: flex;
-    align-items: flex-start;
-    justify-content: flex-start;
-    position: absolute;
-    height: 21px;
-    top: 27px;
-    left: 97px;
-    color: #000000;
-    font-family: Public Sans, var(--default-font-family);
-    font-size: 18px;
-    font-weight: 400;
-    line-height: 21px;
-    text-align: left;
-    white-space: nowrap;
-    z-index: 3;
-  }
+
   .wrapper-2 {
     display: flex;
     justify-content: space-around;
     align-items: center;
-    position: absolute;
+    position: relative;
     width: 400px;
     height: 55px;
     top: 99px;
     left: 25px;
     background: #ffffff;
     border: 1px solid #91b7d5;
-    z-index: 8;
     overflow: hidden;
     border-radius: 20px;
     box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25) inset;
@@ -129,7 +197,6 @@
     background: url(https://static.codia.ai/custom_image/2025-04-09/023407/user-icon.svg)
       no-repeat center;
     background-size: cover;
-    z-index: 9;
     overflow: hidden;
   }
   .text-2 {
@@ -147,7 +214,6 @@
     line-height: 21px;
     text-align: left;
     white-space: nowrap;
-    z-index: 10;
   }
   .box-3 {
     display: flex;
@@ -160,7 +226,6 @@
     left: 23px;
     background: #ffffff;
     border: 1px solid #91b7d5;
-    z-index: 13;
     overflow: hidden;
     border-radius: 20px;
     box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25) inset;
@@ -174,7 +239,6 @@
     background: url(https://static.codia.ai/custom_image/2025-04-09/023407/password-icon.svg)
       no-repeat center;
     background-size: cover;
-    z-index: 14;
     overflow: hidden;
   }
   .pic-2 {
@@ -187,7 +251,6 @@
       no-repeat center;
     background-size: cover;
     transform: translate(0, -52.08%);
-    z-index: 16;
     overflow: hidden;
   }
   .text-3 {
@@ -205,24 +268,28 @@
     line-height: 21px;
     text-align: left;
     white-space: nowrap;
-    z-index: 15;
   }
-  .pic-3 {
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    top: 260px;
-    left: 44px;
-    background: url(https://static.codia.ai/custom_image/2025-04-09/023407/checkbox-icon.svg)
-      no-repeat center;
-    background-size: cover;
-    z-index: 18;
-  }
+.text-wellcome {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  position: absolute;
+  height: 21px;
+  top: 27px;
+  left: 97px;
+  color: #000000;
+  font-family: Public Sans, var(--default-font-family);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 21px;
+  text-align: left;
+  white-space: nowrap;
+}
+
   .box-4 {
     position: absolute;
     width: 91px;
     height: 15px;
-    top: 260px;
     left: 302px;
     font-family: Public Sans, var(--default-font-family);
     font-size: 13px;
@@ -256,33 +323,14 @@
     text-decoration: underline;
     text-transform: lowercase;
   }
-  .text-6 {
-    display: flex;
-    align-items: flex-start;
-    justify-content: flex-start;
-    position: absolute;
-    height: 16px;
-    top: 264px;
-    left: 70px;
-    color: #372e7c;
-    font-family: Public Sans, var(--default-font-family);
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 16px;
-    text-align: left;
-    white-space: nowrap;
-    z-index: 5;
-  }
   .wrapper-3 {
-    position: absolute;
-    top: 297px;
+    position: relative;
     right: 190.95px;
-    bottom: 89px;
-    left: 133px;
-    background: #09003e;
-    z-index: 29;
+    z-index: 100;
     border-radius: 9999px;
+    top: 100px;
   }
+
   .box-5 {
     position: relative;
     width: 183.05px;
@@ -302,6 +350,7 @@
     background: #ffffff;
     z-index: 28;
     border-radius: 9999px;
+    left: -100px;
   }
   .img-4 {
     position: absolute;
@@ -327,17 +376,7 @@
     border-radius: 20px;
     box-shadow: 0 0 1px 0 #000000;
   }
-  .pic-4 {
-    position: relative;
-    width: 30px;
-    height: 30px;
-    margin: 5px 0 0 5px;
-    background: url(https://static.codia.ai/custom_image/2025-04-09/023407/login-icon.svg)
-      no-repeat center;
-    background-size: cover;
-    z-index: 36;
-    overflow: hidden;
-  }
+
   .text-7 {
     display: flex;
     align-items: center;
@@ -356,18 +395,7 @@
     white-space: nowrap;
     z-index: 31;
   }
-  .pic-5 {
-    position: absolute;
-    width: 32px;
-    height: 32px;
-    top: 16px;
-    left: 123px;
-    background: url(https://static.codia.ai/custom_image/2025-04-09/023407/arrow-icon.svg)
-      no-repeat center;
-    background-size: cover;
-    z-index: 27;
-    overflow: hidden;
-  }
+
   .text-8 {
     display: flex;
     align-items: flex-start;
@@ -402,51 +430,33 @@
     white-space: nowrap;
     z-index: 6;
   }
-  .text-a {
-    display: flex;
-    align-items: flex-start;
-    justify-content: flex-start;
-    position: absolute;
-    height: 18px;
-    top: calc(50% - -143.5px);
-    left: 180px;
-    color: rgba(0, 0, 0, 0.73);
-    font-family: Public Sans, var(--default-font-family);
-    font-size: 15px;
-    font-weight: 400;
-    line-height: 17.625px;
-    text-align: left;
-    white-space: nowrap;
-    z-index: 17;
-  }
-  .pic-6 {
-    position: absolute;
-    width: 153.007px;
-    height: 2px;
-    top: 373px;
-    left: 0;
-    background: url(https://static.codia.ai/custom_image/2025-04-09/023407/left-divider.svg)
-      no-repeat center;
-    background-size: cover;
-    z-index: 20;
-  }
-  .pic-7 {
-    position: absolute;
-    width: 153.007px;
-    height: 2px;
-    top: 373px;
-    left: 300px;
-    background: url(https://static.codia.ai/custom_image/2025-04-09/023407/right-divider.svg)
-      no-repeat center;
-    background-size: cover;
-    z-index: 21;
-  }
+
+.section {
+  position: relative;
+  width: 507px;
+  height: 445px;
+  margin: 124px 0 0 184px;
+}
+
+.titile {
+  position: relative;
+  align-items: flex-start;
+  justify-content: flex-start;
+  color: #000000;
+  font-family: Public Sans, var(--default-font-family);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 21px;
+  top: 300px;
+  left: 170px;
+  text-align: center;
+}
   .section-2 {
     position: absolute;
     width: 45px;
     height: 45px;
     top: 400px;
-    left: 153px;
+    left: 160px;
     border: 1px solid #91b7d5;
     z-index: 11;
     overflow: hidden;
@@ -457,8 +467,7 @@
     width: 28px;
     height: 29px;
     margin: 8px 0 0 9px;
-    background: url(https://static.codia.ai/custom_image/2025-04-09/023407/google-icon.svg)
-      no-repeat center;
+    cursor: pointer;
     background-size: cover;
     z-index: 12;
     overflow: hidden;
@@ -468,7 +477,9 @@
     width: 45px;
     height: 45px;
     top: 400px;
-    left: 268px;
+    left: 215px;
+    cursor: pointer;
+
     border: 1px solid #91b7d5;
     z-index: 24;
     overflow: hidden;
@@ -479,8 +490,7 @@
     width: 28px;
     height: 29px;
     margin: 8px 0 0 9px;
-    background: url(https://static.codia.ai/custom_image/2025-04-09/023407/facebook-icon.svg)
-      no-repeat center;
+
     background-size: cover;
     z-index: 25;
     overflow: hidden;
@@ -488,15 +498,15 @@
   .section-3 {
     position: relative;
     width: 263px;
+    left: 260px;
     height: 18px;
-    margin: 52px 0 0 275px;
+    top: 50px;
     font-family: Public Sans, var(--default-font-family);
     font-size: 15px;
     font-weight: 400;
     line-height: 17.625px;
-    text-align: left;
+    text-align: center;
     text-overflow: initial;
-    white-space: nowrap;
     z-index: 4;
   }
   .text-b {
@@ -517,6 +527,19 @@
     line-height: 18px;
     text-align: left;
   }
+
+.input-box {
+  flex-grow: 1;
+  height: 100%;
+  width: calc(100% - 50px); /* Adjust width to leave space for icon */
+  border: none;
+  outline: none;
+  padding: 0 50px;
+  background: transparent;
+  font-family: Public Sans, var(--default-font-family);
+  font-size: 18px;
+  color: #000000;
+}
   .text-d {
     display: flex;
     align-items: flex-start;
@@ -534,52 +557,67 @@
     white-space: nowrap;
     z-index: 7;
   }
-  /* From Uiverse.io by adamgiebl */ 
-button {
-  font-family: inherit;
-  font-size: 20px;
-  background: royalblue;
+.wrapper-3 {
+  position: absolute;
+  top: 400px;
+  right: 200px;
+  z-index: 100;
+  border-radius: 9999px;
+}
+.wrapper-3 button  {
+  font-size: 18px;
+  background: linear-gradient(to bottom, #4dc7d9 0%,#66a6ff 100%);
   color: white;
-  padding: 0.7em 1em;
-  padding-left: 0.9em;
+  padding: 0.8em 1.2em;
   display: flex;
   align-items: center;
+  justify-content: center;
   border: none;
+  box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s;
+  z-index: 1000;
+  position: relative;
+  font-family: inherit;
+  width: 195px;
+  background: royalblue;
   border-radius: 16px;
-  overflow: hidden;
-  transition: all 0.2s;
   cursor: pointer;
+  top :-100px;
+
 }
 
-button span {
+.wrapper-3 button span {
+  position: relative;
   display: block;
-  margin-left: 0.3em;
   transition: all 0.3s ease-in-out;
 }
 
-button svg {
+.wrapper-3 button svg {
   display: block;
+  left: 60px;
   transform-origin: center center;
   transition: transform 0.3s ease-in-out;
 }
-
-button:hover .svg-wrapper {
+.wrapper-3 .svg-wrapper-1 {
+  animation: fly-1 0.6s ease-in-out infinite alternate;
+}
+.wrapper-3 button:hover .svg-wrapper {
   animation: fly-1 0.6s ease-in-out infinite alternate;
 }
 
-button:hover svg {
-  transform: translateX(1.2em) rotate(45deg) scale(1.1);
+.wrapper-3 button:hover svg {
+  transform: translateX(0em) rotate(45deg) scale(1.1);
 }
 
-button:hover span {
-  transform: translateX(5em);
+.wrapper-3 button:hover span {
+  transform: translateX(1.2px);
 }
 
-button:active {
+.wrapper-3 button:active {
   transform: scale(0.95);
 }
 
-@keyframes fly-1 {
+.wrapper-3 @keyframes fly-1 {
   from {
     transform: translateY(0.1em);
   }

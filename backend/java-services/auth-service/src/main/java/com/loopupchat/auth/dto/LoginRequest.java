@@ -1,7 +1,20 @@
 package com.loopupchat.auth.dto;
-import lombok.Data;
-@Data
-public class LoginRequest {
-    private String idToken; // Firebase ID Token từ frontend
 
+public class LoginRequest {
+    private String idToken;
+
+    public LoginRequest() {
+    }
+
+    public LoginRequest(String idToken) {
+        this.idToken = idToken;
+    }
+
+    public String getIdToken() {
+        return idToken;
+    }
+
+    public void setIdToken(String idToken) {
+        this.idToken = idToken;
+    }
 }

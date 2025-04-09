@@ -1,0 +1,849 @@
+/* OTP Input Styles */
+.otp-container {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 24px 0;
+    position: absolute;
+    left: 50px;
+    top: 65px;
+    z-index: 1000; /* Ensure inputs are above any background elements */
+}
+
+.otp-input {
+    width: 50px;
+    height: 50px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 500;
+    color: #333;
+    background-color: white;
+    transition: all 0.2s ease;
+    outline: none;
+    padding: 0;
+    box-sizing: border-box;
+    /* Ensure input is interactive */
+    pointer-events: auto;
+    cursor: text;
+    /* Remove any readonly or disabled attributes */
+    readonly: false;
+    disabled: false;
+}
+
+.otp-input:focus {
+    border-color: #4361ee;
+    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
+}
+
+/* Placeholder styling */
+.otp-input::placeholder {
+    color: #bdbdbd;
+    font-size: 24px;
+    padding-top: 30px;
+}
+
+/* Remove spinner buttons for number inputs */
+.otp-input::-webkit-outer-spin-button,
+.otp-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* For Firefox */
+.otp-input[type=number] {
+    -moz-appearance: textfield;
+}
+
+/* Make sure the box doesn't overlap inputs */
+.box-2 {
+    position: relative;
+    z-index: 4;
+}
+:root {
+    --default-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Ubuntu, "Helvetica Neue", Helvetica, Arial, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft Yahei UI", "Microsoft Yahei",
+    "Source Han Sans CN", sans-serif;
+}
+
+.main-container {
+    overflow: hidden;
+}
+
+.main-container,
+.main-container * {
+    box-sizing: border-box;
+}
+
+input,
+select,
+textarea,
+button {
+    display: flex;
+    outline: 0;
+}
+.gender-label {
+    position: absolute;
+    margin-right: 15px;
+    font-family: "Segoe UI";
+    font-size: 18px;
+    font-weight: 400;
+    top: 220px;
+    left: 20px;
+    color: #000000;
+}
+
+.heart-container.female {
+    --heart-color: rgb(255, 91, 137);
+    position: absolute;
+    width: 150px;
+    height: 30px;
+    top: 220px;
+    left: 90px;
+    transition: .1s;
+
+}
+
+/* Male heart styles */
+.heart-container.male {
+    --heart-color: rgb(91, 137, 255);
+    position: absolute;
+    width: 150px;
+    height: 30px;
+    top: 220px;
+    transition: .1s;
+    left: 200px;
+}
+
+
+
+.heart-container .checkbox {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    z-index: 20;
+    cursor: pointer;
+}
+.text-check {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 35px;
+    top:8px;
+    font-family: Public Sans, var(--default-font-family);
+
+}
+.heart-container .svg-container {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.heart-container .svg-outline,
+.heart-container .svg-filled {
+    fill: var(--heart-color);
+    position: absolute;
+}
+
+.heart-container .svg-filled {
+    animation: keyframes-svg-filled 1s;
+    display: none;
+}
+
+.heart-container .svg-celebrate {
+    position: absolute;
+    animation: keyframes-svg-celebrate .5s;
+    animation-fill-mode: forwards;
+    display: none;
+    stroke: var(--heart-color);
+    fill: var(--heart-color);
+    stroke-width: 2px;
+}
+
+.heart-container .checkbox:checked~.svg-container .svg-filled {
+    display: block
+}
+
+.heart-container .checkbox:checked~.svg-container .svg-celebrate {
+    display: block
+}
+
+@keyframes keyframes-svg-filled {
+    0% {
+        transform: scale(0);
+    }
+
+    25% {
+        transform: scale(1.2);
+    }
+
+    50% {
+        transform: scale(1);
+        filter: brightness(1.5);
+    }
+}
+
+@keyframes keyframes-svg-celebrate {
+    0% {
+        transform: scale(0);
+    }
+
+    50% {
+        opacity: 1;
+        filter: brightness(1.5);
+    }
+
+    100% {
+        transform: scale(1.4);
+        opacity: 0;
+        display: none;
+    }
+}
+.main-container {
+    position: relative;
+    width: 1280px;
+    height: 832px;
+    margin: 0 auto;
+    overflow: hidden;
+}
+.wrapper {
+    position: absolute;
+    width: 1035px;
+    height: 648px;
+    top: 64px;
+    left: 87px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 30px;
+}
+.img {
+    position: relative;
+    width: 276px;
+    height: 276px;
+    margin: 196px 0 0 22px;
+    background: url(../img-svg/logo.png)
+    no-repeat center;
+    background-size: cover;
+    z-index: 22;
+}
+.box {
+    position: absolute;
+    width: 1048px;
+    height: 653px;
+    top: 89px;
+    left: 119px;
+    background: rgba(250, 250, 250, 0.98);
+    border-radius: 30px;
+}
+.box-2 {
+    position: absolute;
+    width: 747px;
+    height: 667px;
+    top: 89px;
+    left: 374px;
+    background: rgba(255, 255, 255, 0.98);
+
+    border-radius: 30px;
+    box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.25);
+}
+
+.img-2 {
+    position: absolute;
+    width: 430px;
+    height: 430px;
+    top: 0;
+    left: 77px;
+    background: url(../img-svg/logo-chim.png)
+    no-repeat center;
+    background-size: cover;
+
+}
+.text-dangki {
+    position: relative;
+    margin-top: 20px;
+    margin-left: 30px;
+    height: 21px;
+    color: #000000;
+    font-family: Public Sans, var(--default-font-family);
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 21px;
+    text-align: center;
+    top: 25px;
+}
+.mail-wrapper-2 {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    position: relative;
+    width: 400px;
+    height: 55px;
+    top: 30px;
+    left: 15px;
+    background: #ffffff;
+    border: 1px solid #91b7d5;
+    overflow: hidden;
+    border-radius: 20px;
+    box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25) inset;
+}
+
+.text-2 {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    position: absolute;
+    height: 21px;
+    top: calc(50% - 9.5px);
+    left: calc(50% - 129px);
+    color: rgba(0, 0, 0, 0.41);
+    font-family: Public Sans, var(--default-font-family);
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 21px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+
+.pic-2 {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    top: 50%;
+    left: 346px;
+    background: url(https://static.codia.ai/custom_image/2025-04-09/023407/visibility-icon.svg)
+    no-repeat center;
+    background-size: cover;
+    transform: translate(0, -52.08%);
+    overflow: hidden;
+}
+.text-3 {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    position: absolute;
+    height: 21px;
+    top: calc(50% - 11.5px);
+    left: 76px;
+    color: rgba(0, 0, 0, 0.21);
+    font-family: Public Sans, var(--default-font-family);
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 21px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.box-4 {
+    position: absolute;
+    width: 91px;
+    height: 15px;
+    top: 260px;
+    left: 302px;
+    font-family: Public Sans, var(--default-font-family);
+    font-size: 13px;
+    font-weight: 300;
+    line-height: 15px;
+    text-align: left;
+    text-decoration: underline;
+    text-overflow: initial;
+    white-space: nowrap;
+    z-index: 19;
+}
+.text-4 {
+    position: relative;
+    color: #d26767;
+    font-family: Public Sans, var(--default-font-family);
+    font-size: 13px;
+    font-weight: 300;
+    line-height: 15.275px;
+    text-align: left;
+    text-decoration: underline;
+    text-transform: capitalize;
+}
+.text-5 {
+    position: relative;
+    color: #d26767;
+    font-family: Public Sans, var(--default-font-family);
+    font-size: 13px;
+    font-weight: 300;
+    line-height: 15.275px;
+    text-align: left;
+    text-decoration: underline;
+    text-transform: lowercase;
+}
+
+
+
+.box-5 {
+    position: relative;
+    width: 183.05px;
+    height: 58px;
+    margin: 1px 0 0 0;
+    border: 1px solid #292929;
+    z-index: 30;
+    overflow: visible auto;
+    border-radius: 9999px;
+    box-shadow: 0 10px 20px 0 rgba(0, 0, 0, 0.4);
+}
+
+.img-4 {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    bottom: 8px;
+    left: 134px;
+    background: url(https://static.codia.ai/custom_image/2025-04-09/023407/button-background.png)
+    no-repeat center;
+    background-size: cover;
+    z-index: 34;
+    border-radius: 9999px;
+}
+.box-6 {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    margin: 1px 0 0 0;
+    background: rgba(86, 8, 255, 0.79);
+    border: 1px solid #252525;
+    z-index: 35;
+    overflow: visible auto;
+    border-radius: 20px;
+    box-shadow: 0 0 1px 0 #000000;
+}
+.pic-4 {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    margin: 5px 0 0 5px;
+    background-size: cover;
+    z-index: 36;
+    overflow: hidden;
+}
+.text-7 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    width: 115px;
+    height: 25px;
+    top: 15px;
+    left: 24px;
+    color: #ffffff;
+    font-family: Roboto, var(--default-font-family);
+    font-size: 17.600000381469727px;
+    font-weight: 700;
+    line-height: 20.625px;
+    text-align: center;
+    white-space: nowrap;
+    z-index: 31;
+}
+.pic-5 {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    top: 16px;
+    left: 123px;
+
+    background-size: cover;
+    z-index: 27;
+    overflow: hidden;
+}
+.text-8 {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    position: absolute;
+    height: 19px;
+    top: calc(50% - 7px);
+    left: calc(50% - 52.5px);
+    color: #ffffff;
+    font-family: Roboto, var(--default-font-family);
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 18.75px;
+    text-align: left;
+    white-space: nowrap;
+    z-index: 26;
+}
+.text-9 {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    position: absolute;
+    height: 21px;
+    top: 299px;
+    left: 22px;
+    color: #000000;
+    font-family: Public Sans, var(--default-font-family);
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 21px;
+    text-align: left;
+    white-space: nowrap;
+    z-index: 6;
+}
+.section-cx {
+    position: absolute;
+    width: 400px;
+    height: 45px;
+    top: 480px;
+    left: 100px;
+    z-index: 1001;
+    overflow: hidden;
+    border-radius: 10px;
+}
+
+.section-2s {
+    position: relative;
+    width: 450px;
+    height: 45px;
+    top: 120px;
+    left: 50px;
+    z-index: 11;
+    font-family: "Segoe UI";
+    overflow: hidden;
+    border-radius: 10px;
+}
+
+.section-2sq {
+    position: relative;
+    width: 450px;
+    height: 45px;
+    top: 120px;
+    left: 50px;
+    z-index: 11;
+    border-bottom-color: #4dc7d9;
+    font-family: "Segoe UI";
+    overflow: hidden;
+    border-radius: 10px;
+}
+
+.text-b {
+    position: relative;
+    color: #000000;
+    font-family: Public Sans, var(--default-font-family);
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 18px;
+    text-align: left;
+}
+.text-c {
+    position: relative;
+    color: #665a00;
+    font-family: Public Sans, var(--default-font-family);
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 18px;
+    text-align: left;
+}
+
+.input-box {
+    flex-grow: 1;
+    height: 100%;
+    width: calc(100% - 50px); /* Adjust width to leave space for icon */
+    border: none;
+    outline: none;
+    padding: 0 50px;
+    background: transparent;
+    font-family: Public Sans, var(--default-font-family);
+    font-size: 18px;
+    color: #000000;
+}
+.text-d {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    position: absolute;
+    height: 79px;
+    top: calc(50% - 254px);
+    left: calc(50% - 20px);
+    color: #080e8c;
+    font-family: Rowdies, var(--default-font-family);
+    font-size: 45px;
+    font-weight: 400;
+    line-height: 55.89px;
+    text-align: left;
+    white-space: nowrap;
+    z-index: 7;
+}
+
+
+.btn-sendOTP button span {
+    display: block;
+    margin-left: 0.3em;
+    transition: all 0.3s ease-in-out;
+}
+
+button svg {
+    display: block;
+    transform-origin: center center;
+    transition: transform 0.3s ease-in-out;
+}
+
+
+
+.btn-sendOTP button:hover svg {
+    transform: translateX(1.2em) rotate(45deg) scale(1.1);
+}
+
+.btn-sendOTP button:hover span {
+}
+
+button:active {
+    transform: scale(0.95);
+}
+
+@keyframes fly-1 {
+    from {
+        transform: translateY(0.1em);
+    }
+
+    to {
+        transform: translateY(-0.1em);
+    }
+}
+/* From Uiverse.io by eirikvold */
+.wrapper-n button {
+    font-family: inherit;
+    font-size: 18px;
+    background: linear-gradient(to bottom, #4dc7d9 0%,#66a6ff 100%);
+    color: white;
+    padding: 0.8em 1.2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 25px;
+    box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s;
+    z-index: 1000;
+    position: absolute;
+    top: 380px;
+    left: 130px;
+}
+
+button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.3);
+}
+
+button:active {
+    transform: scale(0.95);
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+button span {
+    display: block;
+    margin-left: 0.4em;
+    font-family: "Segoe UI";
+}
+
+button svg {
+    width: 18px;
+    height: 18px;
+    fill: white;
+    transition: all 0.3s;
+}
+
+button .svg-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.2);
+    margin-right: 0.5em;
+}
+
+button:hover .svg-wrapper {
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+button:hover svg {
+    transform: rotate(45deg);
+}
+.name {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    position: relative;
+    width: 200px;
+    height: 55px;
+    top: 70px;
+    left: 220px;
+    background: #ffffff;
+    border: 1px solid #91b7d5;
+    overflow: hidden;
+    border-radius: 20px;
+    box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25) inset;
+}
+.ho {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    position: relative;
+    width: 200px;
+    height: 55px;
+    top: 15px;
+    left: 15px;
+    background: #ffffff;
+    border: 1px solid #91b7d5;
+    overflow: hidden;
+    border-radius: 20px;
+    box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25) inset;
+}
+
+
+.password-fieldsx {
+
+    display: flex;
+    position: absolute;
+    top: 200px;
+    left: 50px;
+    width: 400px;
+    margin-right: 10px;
+}
+
+.password-fieldsx .password-field{
+    padding-right: 10px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    position: relative;
+    width: 200px;
+    height: 55px;
+
+
+}
+
+
+
+/* Styling for the input fields to match the design */
+.password-field input {
+    width: 100%;
+    background: #ffffff;
+    position: relative;
+    height: 55px;
+    border: 1px solid #91b7d5;
+    overflow: hidden;
+    border-radius: 20px;
+    font-size: 18px;
+    font-family: "Segoe UI";
+    overflow: hidden;
+    border-radius: 20px;
+    box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25) inset;
+    padding-left: 15px;
+}
+
+/* From Uiverse.io by bociKond */
+/* Hide the default checkbox */
+.container input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+
+}
+
+.container {
+    display: flex;
+    position: absolute;
+    cursor: pointer;
+    font-size: 1.2rem;
+    user-select: none;
+    top: 340px;
+    font-family: "Segoe UI";
+    left: 18px;
+}
+
+/* Create a custom checkbox */
+.checkmark {
+    --clr: #0B6E4F;
+    position: relative;
+    top: 0;
+    left: 0;
+    height: 1.3em;
+    width: 1.3em;
+    background-color: #ccc;
+    border-radius: 50%;
+    transition: 300ms;
+}
+
+/* When the checkbox is checked, add a blue background */
+.container input:checked ~ .checkmark {
+    background-color: var(--clr);
+    border-radius: .5rem;
+    animation: pulse 500ms ease-in-out;
+}
+
+/* Create the checkmark/indicator (hidden when not checked) */
+.checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+}
+
+/* Show the checkmark when checked */
+.container input:checked ~ .checkmark:after {
+    display: block;
+}
+
+/* Style the checkmark/indicator */
+.container .checkmark:after {
+    left: 0.45em;
+    top: 0.25em;
+    width: 0.25em;
+    height: 0.5em;
+    border: solid #E0E0E2;
+    border-width: 0 0.15em 0.15em 0;
+    transform: rotate(45deg);
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 #0B6E4F90;
+        rotate: 20deg;
+    }
+
+    50% {
+        rotate: -20deg;
+    }
+
+    75% {
+        box-shadow: 0 0 0 10px #0B6E4F60;
+    }
+
+    100% {
+        box-shadow: 0 0 0 13px #0B6E4F30;
+        rotate: 0;
+    }
+}
+.btn-sendOTP{
+    font-size: 18px;
+    background: linear-gradient(to bottom, #4dc7d9 0%,#66a6ff 100%);
+    color: white;
+    padding: 0.8em 1.2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s;
+    z-index: 1000;
+    position: absolute;
+    font-family: inherit;
+    width: 120px;
+    background: royalblue;
+    border-radius: 16px;
+    cursor: pointer;
+    top :300px;
+    left: 150px;
+
+}

@@ -1,0 +1,88 @@
+
+.error-toast-container {
+    position: absolute;
+    top: 30px;
+    left: 500px;
+    z-index: 1000;
+    transition: all 0.9s step-start;
+    transform: translateY(20px);
+    opacity: 0;
+    font-family: "Segoe UI";
+    box-shadow: rgba(115, 5, 5, 0.2) 0px 5px 24px;
+
+}
+
+.error-toast-container.visible {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.error-toast-container.hidden {
+    transform: translateY(20px);
+    opacity: 0;
+}
+/* From Uiverse.io by akshat-patel28 */
+.error-toast .card {
+
+    border-radius: 8px;
+    box-sizing: border-box;
+    padding: 10px 15px;
+    background-color: #ffffff;
+    box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: 15px;
+}
+.error-toast .wave {
+    position: fixed;
+    transform: rotate(90deg);
+    left: -31px;
+    width: 90px;
+    height: 100px;
+    fill: #fc0c0c3a;
+}
+.error-toast .icon-container {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #fc0c0c48;
+    border-radius: 50%;
+    margin-left: 8px;
+}
+.error-toast .icon {
+    width: 17px;
+    height: 17px;
+    color: #d10d0d;
+}
+.error-toast .message-text-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    flex-grow: 1;
+}
+.error-toast .message-text,
+.error-toast .sub-text {
+    margin: 0;
+    cursor: default;
+}
+.message-text {
+    color: #d10d0d;
+    font-size: 17px;
+    font-weight: 700;
+}
+.error-toast .sub-text {
+    font-size: 18px;
+    color: #555;
+}
+.error-toast .cross-icon {
+    width: 18px;
+    height: 18px;
+    color: #555;
+    cursor: pointer;
+}
