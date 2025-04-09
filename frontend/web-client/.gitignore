@@ -1,0 +1,17 @@
+# Bỏ thư mục node_modules
+node_modules/
+
+# Bỏ file log
+*.log
+
+# Bỏ file hệ điều hành
+.DS_Store
+Thumbs.db
+
+# Bỏ môi trường dev
+.env
+.env.local
+
+# Bỏ build output
+dist/
+build/
