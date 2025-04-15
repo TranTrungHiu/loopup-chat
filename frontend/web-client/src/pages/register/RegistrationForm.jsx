@@ -16,7 +16,7 @@ function RegistrationForm() {
     gender: "",
     password: "",
     confirmPassword: "",
-    avatarUrl: "",
+    avatarFile: null,
     acceptTerms: false,
   });
   const navigate = useNavigate();
@@ -27,11 +27,41 @@ function RegistrationForm() {
   const [message, setMessage] = useState("");
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, type, checked, files } = e.target;
     setFormData({
       ...formData,
-      [name]: type === "checkbox" ? checked : value,
+      [name]:
+        type === "checkbox" ? checked : type === "file" ? files[0] : value,
     });
+  };
+
+  const uploadAvatarToS3 = async (file) => {
+    try {
+      const fileName = `${Date.now()}-${file.name}`;
+      const response = await axios.get(
+        `http://localhost:8080/api/s3/generate-presigned-url`,
+        {
+          params: { fileName },
+        }
+      );
+
+      const signedUrl = response.data.url;
+
+      console.log("Uploading file:", file);
+      console.log("File type:", file.type);
+      console.log("Signed URL:", signedUrl);
+
+      await axios.put(signedUrl, file, {
+        headers: {
+          "Content-Type": file.type,
+        },
+      });
+
+      return signedUrl.split("?")[0];
+    } catch (error) {
+      console.error("Lỗi khi tải ảnh lên S3:", error);
+      throw new Error("Không thể tải ảnh lên S3.");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -48,6 +78,12 @@ function RegistrationForm() {
     }
 
     try {
+      let avatarUrl = null;
+
+      if (formData.avatarFile) {
+        avatarUrl = await uploadAvatarToS3(formData.avatarFile);
+      }
+
       const response = await axios.post(
         "http://localhost:8080/api/auth/signup",
         {
@@ -56,7 +92,7 @@ function RegistrationForm() {
           email: formData.email,
           password: formData.password,
           gender: formData.gender,
-          avatarUrl: formData.avatarUrl || null,
+          avatarUrl: avatarUrl,
         }
       );
 
@@ -95,13 +131,7 @@ function RegistrationForm() {
           onChange={handleInputChange}
         />
 
-        <FormInput
-          type="text"
-          placeholder="Link ảnh đại diện (tùy chọn)"
-          name="avatarUrl"
-          value={formData.avatarUrl}
-          onChange={handleInputChange}
-        />
+        <FormInput type="file" name="avatarFile" onChange={handleInputChange} />
 
         <GenderSelection
           selectedGender={formData.gender}
@@ -145,7 +175,7 @@ function RegistrationForm() {
         {message && <p className={styles.messageFeedback}>{message}</p>}
 
         <p className={styles.loginPrompt}>
-          <span>Bạn đã có tài khoản ?</span>{" "}
+          <button>Bạn đã có tài khoản ?</button>{" "}
           <span className={styles.loginLink} onClick={handleSignIn}>
             Đăng nhập ngay
           </span>

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.google.api.core.ApiFuture;
@@ -24,6 +25,16 @@ import com.google.firebase.auth.UserRecord.CreateRequest;
 import com.google.firebase.cloud.FirestoreClient;
 import com.loopupchat.auth.dto.LoginRequest;
 import com.loopupchat.auth.dto.SignUpRequest;
+
+import com.amazonaws.HttpMethod;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
+
+import java.net.URL;
+import java.util.Date;
+
+import io.github.cdimascio.dotenv.Dotenv;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -107,5 +118,62 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Lỗi lấy dữ liệu: " + e.getMessage()));
         }
+    }
+}
+
+@RestController
+@RequestMapping("/api/s3")
+class S3Controller {
+
+    private final AmazonS3 s3Client;
+    private final String bucketName;
+
+    public S3Controller() {
+        try {
+            // Load biến môi trường từ file .env
+            Dotenv dotenv = Dotenv.configure()
+                    .directory(
+                            "D:\\University\\Nam04\\CongNgheMoi\\loopup-chat\\backend\\java-services\\auth-service\\.env")
+                    .load();
+            System.out.println("AWS_ACCESS_KEY: " + dotenv.get("AWS_ACCESS_KEY"));
+            System.out.println("AWS_SECRET_KEY: " + dotenv.get("AWS_SECRET_KEY"));
+            System.out.println("AWS_REGION: " + dotenv.get("AWS_REGION"));
+            System.out.println("AWS_BUCKET_NAME: " + dotenv.get("AWS_BUCKET_NAME"));
+
+            String accessKey = dotenv.get("AWS_ACCESS_KEY");
+            String secretKey = dotenv.get("AWS_SECRET_KEY");
+            String region = dotenv.get("AWS_REGION");
+            this.bucketName = dotenv.get("AWS_BUCKET_NAME");
+
+            if (accessKey == null || secretKey == null || region == null || bucketName == null) {
+                throw new IllegalStateException("Không thể đọc được các biến môi trường AWS từ file .env");
+            }
+
+            // Cấu hình S3 client
+            this.s3Client = AmazonS3ClientBuilder.standard()
+                    .withRegion(region)
+                    .build();
+
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi khởi tạo S3Controller: " + e.getMessage(), e);
+        }
+    }
+
+    @GetMapping("/generate-presigned-url")
+    public Map<String, String> generatePresignedUrl(@RequestParam String fileName) {
+        Date expiration = new Date();
+        long expTimeMillis = expiration.getTime();
+        expTimeMillis += 1000 * 60 * 15; // 15 phút
+        expiration.setTime(expTimeMillis);
+
+        GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucketName, fileName)
+                .withMethod(HttpMethod.PUT)
+                .withExpiration(expiration);
+        URL url = s3Client.generatePresignedUrl(generatePresignedUrlRequest);
+
+        System.out.println("Signed URL: " + url.toString());
+        System.out.println("Generated Signed URL: " + url);
+
+        return Map.of("url", url.toString());
     }
 }

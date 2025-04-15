@@ -23,11 +23,12 @@ export default function Home() {
           `http://localhost:8080/api/user/profile`,
           {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("idToken")}`,
+              Authorization: `Bearer ${sessionStorage.getItem("idToken")}`,
             },
           }
         );
-        setUser(response.data);
+        console.log("Token:", sessionStorage.getItem("idToken"));
+        setUserInfo(response.data);
       } catch (error) {
         console.error("Lỗi lấy thông tin người dùng:", error);
       }

@@ -19,16 +19,17 @@ export default function SignIn() {
   const handleSignIn = async () => {
     try {
       const userCred = await signInWithEmailAndPassword(auth, email, pass);
-      const token = await userCred.user.getIdToken();
+      const user = userCred.user;
+      const token = await user.getIdToken();
 
       const res = await axios.post("http://localhost:8080/api/auth/login", {
         idToken: token,
       });
 
       if (res.status === 200) {
-        setMsg("✅ Đăng nhập thành công!");
-        localStorage.setItem("uid", res.data.uid);
-        localStorage.setItem("email", res.data.email);
+        sessionStorage.setItem("idToken", token); // Đảm bảo lưu token vào sessionStorage
+        sessionStorage.setItem("uid", res.data.uid);
+        sessionStorage.setItem("email", res.data.email);
         setTimeout(() => navigate("/home"), 1000);
       } else {
         setMsg("❌ Đăng nhập thất bại.");

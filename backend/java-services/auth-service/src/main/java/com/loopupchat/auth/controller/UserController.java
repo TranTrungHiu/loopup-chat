@@ -31,6 +31,7 @@ public class UserController {
     public ResponseEntity<?> getUserProfile(
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
+            System.out.println("Received Authorization: " + authHeader); // 👈 Log để kiểm tra
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Thiếu token");
             }
