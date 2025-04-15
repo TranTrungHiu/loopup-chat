@@ -27,9 +27,12 @@ export default function SignIn() {
       });
 
       if (res.status === 200) {
-        sessionStorage.setItem("idToken", token); // Đảm bảo lưu token vào sessionStorage
-        sessionStorage.setItem("uid", res.data.uid);
-        sessionStorage.setItem("email", res.data.email);
+        // Lưu token và uid vào localStorage
+        localStorage.setItem("idToken", token);
+        localStorage.setItem("uid", res.data.uid);
+        localStorage.setItem("email", res.data.email);
+
+        // Chuyển hướng đến trang Home
         setTimeout(() => navigate("/home"), 1000);
       } else {
         setMsg("❌ Đăng nhập thất bại.");
@@ -83,8 +86,8 @@ export default function SignIn() {
 
           <div className="wrapper-3">
             <button onClick={handleSignIn}>
-              <div class="svg-wrapper-1">
-                <div class="svg-wrapper">
+              <div className="svg-wrapper-1">
+                <div className="svg-wrapper">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
