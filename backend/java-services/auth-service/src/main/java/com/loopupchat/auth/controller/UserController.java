@@ -1,13 +1,15 @@
 package com.loopupchat.auth.controller;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
+import com.google.api.core.ApiFuture;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.QuerySnapshot;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
@@ -52,4 +54,30 @@ public class UserController {
                     .body("Lỗi khi lấy thông tin người dùng: " + e.getMessage());
         }
     }
+
+    @GetMapping("/find")
+    public ResponseEntity<?> findUserByEmail(@RequestParam String email) {
+        try {
+            ApiFuture<QuerySnapshot> future = firestore.collection("users")
+                    .whereEqualTo("email", email)
+                    .get();
+
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+            if (documents.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy người dùng");
+            }
+
+            DocumentSnapshot userDoc = documents.get(0);
+            Map<String, Object> userData = userDoc.getData();
+            userData.put("uid", userDoc.getId()); // trả luôn id để client dùng check friendship
+            System.out.println("Email tìm kiếm: " + email);
+            return ResponseEntity.ok(userData);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Lỗi khi tìm người dùng: " + e.getMessage());
+        }
+    }
+
+
 }
