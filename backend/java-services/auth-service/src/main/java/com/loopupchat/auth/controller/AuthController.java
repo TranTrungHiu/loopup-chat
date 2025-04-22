@@ -134,7 +134,7 @@ class S3Controller {
             // Load biến môi trường từ file .env
             Dotenv dotenv = Dotenv.configure()
                     .directory(
-                            "D:\\University\\Nam04\\CongNgheMoi\\loopup-chat\\backend\\java-services\\auth-service\\.env")
+                            "D:\\cloneCNM\\loopup-chat\\backend\\java-services\\auth-service\\.env")
                     .load();
             System.out.println("AWS_ACCESS_KEY: " + dotenv.get("AWS_ACCESS_KEY"));
             System.out.println("AWS_SECRET_KEY: " + dotenv.get("AWS_SECRET_KEY"));

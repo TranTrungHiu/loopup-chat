@@ -567,10 +567,14 @@ const Home = () => {
           <div
             className={`icon ${tabs === "Invite" ? "active" : ""}`}
             title="Lời mời kết bạn"
-            onClick={() => setTabs("Invite")}
+            onClick={() => {
+                setTabs("Invite");
+                setShowFriendSidebar(false); // Đóng sidebar bạn bè khi chuyển sang tab lời mời
+            }}
           >
             <FaUserPlus size={18} /> <span>Lời mời</span>
           </div>
+
           <div
             className="icon"
             title="Tìm bạn"
@@ -604,6 +608,7 @@ const Home = () => {
                 onClick={() => {
                   setShowFriendSidebar(!showFriendSidebar);
                   setShowSettings(false);
+                  setTabs("Friend");
                 }}
               >
                 <FaUserFriends size={16} /> Bạn bè
@@ -746,38 +751,30 @@ const Home = () => {
                             )}
                           </div>
                           <div className="message-time">
-                            {msg.timestamp
-                              ? (() => {
-                                  try {
-                                    // Check if timestamp is a Firestore timestamp object
-                                    if (
-                                      msg.timestamp &&
-                                      msg.timestamp.seconds
-                                    ) {
-                                      return format(
-                                        new Date(msg.timestamp.seconds * 1000),
-                                        "HH:mm:ss",
-                                        { locale: vi }
-                                      );
-                                    }
-                                    // Handle regular Date objects or ISO strings
-                                    const date = new Date(msg.timestamp);
-                                    if (!isNaN(date.getTime())) {
-                                      return format(date, "HH:mm:ss", {
-                                        locale: vi,
-                                      });
-                                    }
-                                    return "";
-                                  } catch (error) {
-                                    console.error(
-                                      "Error formatting date:",
-                                      error
-                                    );
-                                    return "";
-                                  }
-                                })()
-                              : ""}
-                          </div>
+                            {msg.timestamp ? (() => {
+                              try {
+                                let date;
+
+                                // Nếu là Firestore timestamp
+                                if (msg.timestamp.seconds) {
+                                  date = new Date(msg.timestamp.seconds * 1000);
+                                } else {
+                                  date = new Date(msg.timestamp);
+                                }
+
+                                if (!isNaN(date.getTime())) {
+                                  const hour = date.getHours().toString().padStart(2, "0");
+                                  return `${hour}:00`;
+                                }
+
+                                return "";
+                              } catch (error) {
+                                console.error("Error formatting time:", error);
+                                return "";
+                              }
+                            })() : ""}
+                        </div>
+
                         </div>
                       );
                     })
@@ -995,7 +992,7 @@ const Home = () => {
         uid={uid}
         token={token}
       />
-      {tabs === "Chat" && <InformationChat />}
+      {currentParticipant && tabs==="Chat" && <InformationChat user={currentParticipant} />}
       {tabs === "Friend" && <FriendTab uid={uid} token={token} />}
       {tabs === "Invite" && <InviteTab uid={uid} token={token} />}
     </div>

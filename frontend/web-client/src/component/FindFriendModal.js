@@ -74,7 +74,7 @@ const FindFriendModal = ({ isOpen, onClose, uid, token }) => {
       setSearchPerformed(true);
       
       const res = await fetch(
-        `http://localhost:8080/api/user/find?email=${searchEmail}`,
+        `http://localhost:8080/api/user/search?email=${searchEmail}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
