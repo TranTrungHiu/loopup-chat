@@ -2,7 +2,10 @@ package com.loopupchat.auth.controller;
 
 import java.io.IOException;
 <<<<<<< HEAD
+<<<<<<< HEAD
 import java.util.ArrayList;
+=======
+>>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
 =======
 >>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
 import java.util.List;
@@ -14,12 +17,16 @@ import com.google.cloud.firestore.QuerySnapshot;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 <<<<<<< HEAD
+<<<<<<< HEAD
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+=======
+import org.springframework.web.bind.annotation.*;
+>>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
 =======
 import org.springframework.web.bind.annotation.*;
 >>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
@@ -81,6 +88,7 @@ public class UserController {
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     @GetMapping
     public ResponseEntity<?> getAllUsers() {
         try {
@@ -109,13 +117,22 @@ public class UserController {
     public ResponseEntity<?> findUserByEmail(@RequestParam String email) {
         try {
 >>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
+=======
+    @GetMapping("/find")
+    public ResponseEntity<?> findUserByEmail(@RequestParam String email) {
+        try {
+>>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
             ApiFuture<QuerySnapshot> future = firestore.collection("users")
                     .whereEqualTo("email", email)
                     .get();
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             // Lấy danh sách tài liệu
             List<QueryDocumentSnapshot> documents = future.get().getDocuments(); // Sử dụng getDocuments()
+=======
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+>>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
 =======
             List<QueryDocumentSnapshot> documents = future.get().getDocuments();
 >>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
@@ -123,6 +140,7 @@ public class UserController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy người dùng");
             }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
             // Lấy tài liệu đầu tiên
             DocumentSnapshot userDoc = documents.get(0);
@@ -139,6 +157,8 @@ public class UserController {
         } catch (Exception e) {
             e.printStackTrace(); // Log chi tiết lỗi
 =======
+=======
+>>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
             DocumentSnapshot userDoc = documents.get(0);
             Map<String, Object> userData = userDoc.getData();
             userData.put("uid", userDoc.getId()); // trả luôn id để client dùng check friendship
@@ -146,12 +166,16 @@ public class UserController {
             return ResponseEntity.ok(userData);
 
         } catch (Exception e) {
+<<<<<<< HEAD
+>>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
+=======
 >>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Lỗi khi tìm người dùng: " + e.getMessage());
         }
     }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
     @GetMapping("/{uid}")
     public ResponseEntity<?> getUserByUid(@PathVariable String uid) {
@@ -171,6 +195,9 @@ public class UserController {
                     .body(Map.of("message", "Lỗi khi lấy thông tin người dùng: " + e.getMessage()));
         }
     }
+=======
+
+>>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
 =======
 
 >>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28

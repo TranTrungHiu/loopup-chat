@@ -4,6 +4,10 @@
     "date-fns": "^4.1.0",
     "firebase": "^11.6.0",
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+    "lucide-react": "^0.501.0",
+>>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
 =======
     "lucide-react": "^0.501.0",
 >>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
