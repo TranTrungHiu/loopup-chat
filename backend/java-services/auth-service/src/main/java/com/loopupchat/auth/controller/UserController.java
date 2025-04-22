@@ -1,35 +1,9 @@
 package com.loopupchat.auth.controller;
 
 import java.io.IOException;
-<<<<<<< HEAD
-<<<<<<< HEAD
 import java.util.ArrayList;
-=======
->>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
-=======
->>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
 import java.util.List;
 import java.util.Map;
-
-import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.QueryDocumentSnapshot;
-import com.google.cloud.firestore.QuerySnapshot;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-<<<<<<< HEAD
-<<<<<<< HEAD
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-=======
-import org.springframework.web.bind.annotation.*;
->>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
-=======
-import org.springframework.web.bind.annotation.*;
->>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
 
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.CollectionReference;
@@ -41,6 +15,15 @@ import com.google.cloud.firestore.QuerySnapshot;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseToken;
 import com.google.firebase.cloud.FirestoreClient;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/user")
@@ -87,13 +70,11 @@ public class UserController {
         }
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     @GetMapping
     public ResponseEntity<?> getAllUsers() {
         try {
             System.out.println("Received request for all users"); // Log kiểm tra
-            CollectionReference usersRef = FirestoreSingleton.getFirestore().collection("users");
+            CollectionReference usersRef = firestore.collection("users");
 
             List<Map<String, Object>> users = new ArrayList<>();
             for (DocumentSnapshot doc : usersRef.get().get().getDocuments()) {
@@ -112,36 +93,16 @@ public class UserController {
     public ResponseEntity<?> findUserByEmail(@RequestParam String email) {
         try {
             // Truy vấn Firestore
-=======
-    @GetMapping("/find")
-    public ResponseEntity<?> findUserByEmail(@RequestParam String email) {
-        try {
->>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
-=======
-    @GetMapping("/find")
-    public ResponseEntity<?> findUserByEmail(@RequestParam String email) {
-        try {
->>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
             ApiFuture<QuerySnapshot> future = firestore.collection("users")
                     .whereEqualTo("email", email)
                     .get();
 
-<<<<<<< HEAD
-<<<<<<< HEAD
             // Lấy danh sách tài liệu
-            List<QueryDocumentSnapshot> documents = future.get().getDocuments(); // Sử dụng getDocuments()
-=======
             List<QueryDocumentSnapshot> documents = future.get().getDocuments();
->>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
-=======
-            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
->>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
             if (documents.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy người dùng");
             }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
             // Lấy tài liệu đầu tiên
             DocumentSnapshot userDoc = documents.get(0);
             if (userDoc == null || userDoc.getData() == null) {
@@ -150,37 +111,21 @@ public class UserController {
 
             // Chuẩn bị dữ liệu trả về
             Map<String, Object> userData = userDoc.getData();
-            userData.put("id", userDoc.getId()); // Thêm ID người dùng
+            userData.put("id", userDoc.getId()); // Thêm ID người dùng vào response để client dùng check friendship
+            System.out.println("Email tìm kiếm: " + email);
 
             return ResponseEntity.ok(userData);
 
         } catch (Exception e) {
             e.printStackTrace(); // Log chi tiết lỗi
-=======
-=======
->>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
-            DocumentSnapshot userDoc = documents.get(0);
-            Map<String, Object> userData = userDoc.getData();
-            userData.put("uid", userDoc.getId()); // trả luôn id để client dùng check friendship
-            System.out.println("Email tìm kiếm: " + email);
-            return ResponseEntity.ok(userData);
-
-        } catch (Exception e) {
-<<<<<<< HEAD
->>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
-=======
->>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Lỗi khi tìm người dùng: " + e.getMessage());
         }
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     @GetMapping("/{uid}")
     public ResponseEntity<?> getUserByUid(@PathVariable String uid) {
         try {
-            Firestore firestore = FirestoreClient.getFirestore();
             DocumentReference userRef = firestore.collection("users").document(uid);
             DocumentSnapshot snapshot = userRef.get().get();
 
@@ -195,10 +140,4 @@ public class UserController {
                     .body(Map.of("message", "Lỗi khi lấy thông tin người dùng: " + e.getMessage()));
         }
     }
-=======
-
->>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
-=======
-
->>>>>>> 1a512e1bce3e4f8c00bae0ad9ddc6a8273467c28
 }
