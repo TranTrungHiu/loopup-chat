@@ -44,7 +44,8 @@ public class MessageController {
                 // Nếu đoạn chat chưa tồn tại, tạo đoạn chat mới
                 Map<String, Object> chatData = new HashMap<>();
                 chatData.put("chatId", chatId);
-                chatData.put("participants", Arrays.asList(sender, chatId.split("_")[0]));
+                String[] participants = chatId.split("_");
+                chatData.put("participants", Arrays.asList(participants[0], participants[1]));
                 chatData.put("lastMessage", message);
                 chatData.put("lastUpdated", new Date());
                 chatRef.set(chatData);

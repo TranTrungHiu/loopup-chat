@@ -1,271 +1,573 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import "./styles/Home.css";
+import { FaCog, FaUserPlus, FaUsers } from "react-icons/fa";
+import { BsSendFill } from "react-icons/bs";
+import { BiSearch } from "react-icons/bi";
+import Modal from "react-modal";
 import { useNavigate } from "react-router-dom";
-import { signOut, signInWithEmailAndPassword } from "firebase/auth";
+import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
-import axios from "axios";
-
-export default function Home() {
-  const navigate = useNavigate();
-  const [userInfo, setUserInfo] = useState(null);
-  const [chats, setChats] = useState([]); // Danh sách các cuộc trò chuyện
-  const [allUsers, setAllUsers] = useState([]); // Danh sách tất cả người dùng
-  const [selectedUser, setSelectedUser] = useState(""); // Người dùng được chọn để nhắn tin
-  const [newMessage, setNewMessage] = useState(""); // Tin nhắn mới
-  const [messages, setMessages] = useState([]); // Danh sách tin nhắn
-  const [selectedChatId, setSelectedChatId] = useState(""); // ID của cuộc trò chuyện được chọn
-  const [email, setEmail] = useState(""); // Email để đăng nhập
-  const [pass, setPass] = useState(""); // Mật khẩu để đăng nhập
-  const [msg, setMsg] = useState(""); // Thông báo trạng thái
-
+import {
+  fetchChats,
+  fetchMessages,
+  fetchParticipantInfo,
+  sendMessage,
+  fetchUserInfo,
+  fetchUserByUid,
+} from "../services/chatService";
+Modal.setAppElement("#root"); // Đảm bảo rằng phần tử gốc của ứng dụng là #root
+const Home = () => {
+  const [friendList, setFriendList] = useState([]);
+  const [showFriends, setShowFriends] = useState(false);
   const uid = localStorage.getItem("uid");
-
-  const handleLogout = async () => {
-    await signOut(auth);
-    localStorage.clear(); // Xóa toàn bộ dữ liệu trong localStorage
-    navigate("/signin");
-  };
-
-  const handleSignIn = async () => {
+  const token = localStorage.getItem("idToken"); // Lấy token từ localStorage
+  const fetchFriends = async () => {
     try {
-      const userCred = await signInWithEmailAndPassword(auth, email, pass);
-      const user = userCred.user;
-      const token = await user.getIdToken();
+      const res = await fetch(`http://localhost:8080/api/friends/list/${uid}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
 
-      const res = await axios.post("http://localhost:8080/api/auth/login", {
-        idToken: token,
+      // Lấy thông tin chi tiết của từng bạn bè
+      const friendDetails = await Promise.all(
+        data.map(async (friend) => {
+          let idfriend;
+          if (friend.userId2 === uid) {
+            idfriend = friend.userId1; // Nếu uid là userId2 thì lấy userId1
+          } else {
+            idfriend = friend.userId2; // Nếu uid là userId1 thì lấy userId2
+          }
+          const userInfo = await fetchUserByUid(idfriend); // Gọi API lấy thông tin người dùng
+          return { ...userInfo, id: friend.id }; // Kết hợp thông tin bạn bè với thông tin người dùng
+        })
+      );
+
+      setFriendList(friendDetails); // Lưu danh sách bạn bè vào state
+      setShowFriends(true);
+    } catch (err) {
+      console.error("Lỗi lấy danh sách bạn bè:", err);
+      setFriendList([]);
+    }
+  };
+  useEffect(() => {
+    const loadFriends = async () => {
+      try {
+        const friendsList = await fetchFriends(uid, token); // Gọi API lấy danh sách bạn bè
+        setShowFriends(friendsList); // Lưu danh sách bạn bè vào state
+      } catch (err) {
+        console.error("Lỗi khi lấy danh sách bạn bè:", err);
+      }
+    };
+
+    loadFriends();
+  }, [uid, token]);
+  const handleStartChat = async (friend) => {
+    try {
+      const res = await fetch("http://localhost:8080/api/chats", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          user1: uid, // ID người dùng hiện tại
+          user2: friend.id, // ID bạn bè
+        }),
       });
 
-      if (res.status === 200) {
-        // Lưu thông tin vào localStorage
-        localStorage.setItem("idToken", token);
-        localStorage.setItem("uid", res.data.uid);
-        localStorage.setItem("email", res.data.email);
-
-        // Chuyển hướng đến trang Home
-        setTimeout(() => navigate("/home"), 1000);
-      } else {
-        setMsg("❌ Đăng nhập thất bại.");
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Lỗi từ API:", errorText);
+        throw new Error("Lỗi khi tạo hoặc lấy cuộc trò chuyện");
       }
+
+      const chatData = await res.json();
+      console.log("Cuộc trò chuyện:", chatData);
+
+      // Cập nhật trạng thái để hiển thị cuộc trò chuyện
+      setCurrentChat(chatData);
+      setCurrentParticipant(friend);
+      setShowFriends(false);
     } catch (err) {
-      console.error(err);
-      setMsg("❌ " + (err.response?.data || err.message));
+      console.error("Lỗi khi bắt đầu cuộc trò chuyện:", err);
     }
   };
-
-  useEffect(() => {
-    const uid = localStorage.getItem("uid");
-    if (!uid) {
-      alert("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
-      navigate("/signin");
-    }
-  }, [navigate]);
-
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      try {
-        const response = await axios.get(
-          `http://localhost:8080/api/user/profile`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("idToken")}`,
-            },
-          }
-        );
-        setUserInfo(response.data);
-      } catch (error) {
-        console.error("Lỗi lấy thông tin người dùng:", error);
-      }
-    };
-
-    const fetchChats = async () => {
-      try {
-        const response = await axios.get(`http://localhost:8080/api/chats`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("idToken")}`,
-          },
-        });
-        setChats(response.data);
-      } catch (error) {
-        console.error("Lỗi lấy danh sách cuộc trò chuyện:", error);
-      }
-    };
-
-    const fetchAllUsers = async () => {
-      try {
-        const response = await axios.get(`http://localhost:8080/api/user`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("idToken")}`,
-          },
-        });
-        setAllUsers(response.data);
-      } catch (error) {
-        console.error("Lỗi lấy danh sách người dùng:", error);
-      }
-    };
-
-    fetchUserInfo();
-    fetchChats();
-    fetchAllUsers();
-  }, []);
-
-  const fetchMessages = async (chatId) => {
-    try {
-      const response = await axios.get(
-        `http://localhost:8080/api/messages/${chatId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${sessionStorage.getItem("idToken")}`,
-          },
-        }
-      );
-      setMessages(response.data);
-    } catch (error) {
-      console.error("Lỗi khi lấy tin nhắn:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (selectedChatId) {
-      fetchMessages(selectedChatId);
-    }
-  }, [selectedChatId]);
-
   const handleSendMessage = async () => {
-    const uid = localStorage.getItem("uid"); // Lấy UID từ localStorage
-
-    if (!uid) {
-      alert("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
-      navigate("/signin");
-      return;
-    }
-
-    if (!selectedUser || !newMessage) {
-      alert("Vui lòng chọn người dùng và nhập tin nhắn.");
-      return;
-    }
-
-    const chatId = [uid, selectedUser].sort().join("_"); // Tạo chatId từ uid
-    console.log("Chat ID:", chatId); // In ra chatId để kiểm tra
     try {
-      await axios.post(
-        `http://localhost:8080/api/messages`,
+      if (!currentChat || !newMessage.trim()) return; // Kiểm tra nếu không có cuộc trò chuyện hoặc tin nhắn rỗng
+
+      // Gửi tin nhắn đến server
+      const response = await sendMessage(
+        currentChat.chatId, // ID của cuộc trò chuyện hiện tại
+        uid, // ID người gửi (người dùng hiện tại)
+        newMessage, // Nội dung tin nhắn
+        token // Token xác thực
+      );
+
+      // Thêm tin nhắn mới vào danh sách tin nhắn hiện tại
+      setMessages((prevMessages) => [
+        ...prevMessages,
         {
-          chatId,
           sender: uid,
           message: newMessage,
+          timestamp: new Date(), // Thời gian hiện tại
         },
+      ]);
+
+      // Xóa nội dung ô nhập tin nhắn
+      setNewMessage("");
+
+      // Tải lại danh sách tin nhắn từ server để đảm bảo đồng bộ
+      const updatedMessages = await fetchMessages(currentChat.chatId, token);
+      setMessages(updatedMessages);
+    } catch (err) {
+      console.error("Lỗi khi gửi tin nhắn:", err);
+    }
+  };
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [userInfo, setUserInfo] = useState(null);
+
+  useEffect(() => {
+    if (isAccountModalOpen && uid) {
+      fetch(`http://localhost:8080/api/auth/user/${uid}`)
+        .then((res) => res.json())
+        .then((data) => setUserInfo(data))
+        .catch((err) => console.error("Lỗi khi lấy user info:", err));
+    }
+  }, [isAccountModalOpen]);
+
+  const navigate = useNavigate();
+  const handleLogout = async () => {
+    await signOut(auth);
+    localStorage.clear();
+    navigate("/");
+  };
+
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [searchEmail, setSearchEmail] = useState("");
+  const [foundUser, setFoundUser] = useState(null);
+  const [isFriend, setIsFriend] = useState(false);
+  const [showNotFound, setShowNotFound] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [newMessage, setNewMessage] = useState(""); // State để lưu tin nhắn mới
+  const [messages, setMessages] = useState([]); // State để lưu danh sách tin nhắn
+
+  const handleSearchUser = async () => {
+    try {
+      const res = await fetch(
+        `http://localhost:8080/api/user/find?email=${searchEmail}`,
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("idToken")}`,
-          },
+          method: "GET", // Sử dụng phương thức GET
         }
       );
-      alert("Tin nhắn đã được gửi!");
-      setNewMessage("");
-    } catch (error) {
-      console.error("Lỗi khi gửi tin nhắn:", error);
+
+      if (!res.ok) {
+        setFoundUser(null);
+        setShowNotFound(true);
+        setTimeout(() => setShowNotFound(false), 3000);
+        return;
+      }
+
+      const user = await res.json();
+      setFoundUser(user);
+
+      const checkRes = await fetch(
+        `http://localhost:8080/api/friends/status?userId1=${uid}&userId2=${user.id}`
+      );
+      const status = await checkRes.text();
+      setIsFriend(status);
+    } catch (err) {
+      console.error("Lỗi tìm người dùng:", err);
+      setFoundUser(null);
+      setShowNotFound(true);
+      setTimeout(() => setShowNotFound(false), 3000);
     }
   };
 
-  const renderMessages = (messages) => {
-    const uid = localStorage.getItem("uid"); // Lấy UID của người dùng đang đăng nhập
+  const handleSendRequest = async () => {
+    try {
+      const res = await fetch("http://localhost:8080/api/friends/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId1: uid,
+          userId2: foundUser.id,
+        }),
+      });
 
-    return messages.map((message) => (
-      <div
-        key={message.messageId}
-        style={{
-          textAlign: message.sender === uid ? "right" : "left", // Canh phải nếu là tin nhắn của chính người dùng
-          margin: "10px 0",
-        }}
-      >
-        <p
-          style={{
-            display: "inline-block",
-            padding: "10px",
-            borderRadius: "10px",
-            backgroundColor: message.sender === uid ? "#DCF8C6" : "#FFF", // Màu khác nhau cho tin nhắn gửi và nhận
-            maxWidth: "60%",
-          }}
-        >
-          {message.message}
-        </p>
-      </div>
-    ));
+      if (!res.ok) {
+        const errorMessage = await res.text();
+        console.error("Lỗi gửi lời mời kết bạn:", errorMessage);
+        alert(errorMessage); // Hiển thị thông báo lỗi
+        return;
+      }
+
+      setIsFriend("pending");
+      alert("Lời mời kết bạn đã được gửi.");
+    } catch (err) {
+      console.error("Lỗi gửi lời mời kết bạn:", err);
+    }
   };
+  const [chats, setChats] = useState([]); // State để lưu danh sách cuộc trò chuyện
+  const [participantsInfo, setParticipantsInfo] = useState({});
+  useEffect(() => {
+    const loadChats = async () => {
+      try {
+        const chatList = await fetchChats(token); // Gọi API để lấy danh sách cuộc trò chuyện
+        setChats(chatList);
 
+        // Lấy thông tin participants cho từng chat
+        const participantPromises = chatList.map(async (chat) => {
+          const participantInfo = await fetchParticipantInfo(chat.chatId, uid);
+          return { chatId: chat.chatId, participantInfo };
+        });
+
+        const participantResults = await Promise.all(participantPromises);
+        const participantMap = participantResults.reduce((acc, item) => {
+          acc[item.chatId] = item.participantInfo;
+          return acc;
+        }, {});
+
+        setParticipantsInfo(participantMap);
+      } catch (err) {
+        console.error("Lỗi khi lấy danh sách cuộc trò chuyện:", err);
+      }
+    };
+
+    if (token) {
+      loadChats();
+    }
+  }, [token, uid]);
+
+  const [currentChat, setCurrentChat] = useState(null); // Cuộc trò chuyện hiện tại
+  const [currentParticipant, setCurrentParticipant] = useState(null); // Người tham gia hiện tại
   return (
-    <div className="home-container">
-      <h1>Chào mừng bạn đến với Loopup Chat! 🎉</h1>
+    <div className="chat-container">
+      {/* Sidebar */}
+      <div className="sidebar">
+        <div className="logo">LOOPUP</div>
+        <div className="sidebar-icons">
+          <div className="icon active" title="Chat">
+            💬 <span>Chat</span>
+          </div>
+          <div className="icon" title="Bạn bè" onClick={fetchFriends}>
+            👥 <span>Bạn bè</span>
+          </div>
+          <div className="icon" title="Ảnh">
+            📷 <span>Ảnh</span>
+          </div>
+        </div>
 
-      {userInfo ? (
-        <>
-          <img
-            src={userInfo.avatarUrl}
-            alt="avatar"
-            style={{ width: 100, height: 100, borderRadius: "50%" }}
-          />
-          <p>
-            <strong>Họ tên:</strong> {userInfo.firstName} {userInfo.lastName}
-          </p>
-          <p>
-            <strong>Email:</strong> {userInfo.email}
-          </p>
-          <p>
-            <strong>Giới tính:</strong> {userInfo.gender}
-          </p>
-        </>
-      ) : (
-        <p>Đang tải thông tin người dùng...</p>
-      )}
+        <div className="settings-container">
+          <div
+            className="settings-icon"
+            title="Cài đặt"
+            onClick={() => setShowSettings(!showSettings)}
+          >
+            <FaCog />
+          </div>
+          {showSettings && (
+            <div className="settings-menu show">
+              <button
+                className="settings-item"
+                onClick={() => setIsAccountModalOpen(true)}
+              >
+                👤 Thông tin tài khoản
+              </button>
+              <button className="settings-item logout" onClick={handleLogout}>
+                🚪 Đăng xuất
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
-      <h2>Danh sách cuộc trò chuyện</h2>
-      <ul>
-        {chats.map((chat) => {
-          const otherParticipants = chat.participants
-            .filter((participant) => participant !== uid)
-            .map((participant) => {
-              const user = allUsers.find((user) => user.uid === participant);
-              return user ? `${user.firstName} ${user.lastName}` : participant; // Hiển thị tên nếu tìm thấy, nếu không hiển thị UID
-            });
+      {/* Chat list */}
+      <div className="chat-list">
+        <h3 className="chat-title">Trò Chuyện</h3>
+        <div className="search-box">
+          <BiSearch className="search-icon" size={50} />
+          <input type="text" placeholder="Tìm kiếm" />
+          <button
+            className="icon-button"
+            title="Thêm bạn"
+            onClick={() => setIsUserModalOpen(true)}
+          >
+            <FaUserPlus size={27} />
+          </button>
+          <button className="icon-button" title="Tạo nhóm">
+            <FaUsers size={27} />
+          </button>
+        </div>
 
-          return (
-            <li
-              key={chat.chatId}
-              onClick={() => setSelectedChatId(chat.chatId)}
-            >
-              <strong>Cuộc trò chuyện với:</strong>{" "}
-              {otherParticipants.join(", ")} {/* Hiển thị tên người khác */}
-              <p>{chat.lastMessage}</p>
-            </li>
-          );
-        })}
-      </ul>
+        <div className="chat-items">
+          {chats.map((chat) => {
+            const participant = participantsInfo[chat.chatId];
 
-      <h2>Tin nhắn</h2>
-      <div>{renderMessages(messages)}</div>
+            return (
+              <div
+                className="chat-item"
+                key={chat.chatId}
+                onClick={async () => {
+                  setCurrentChat(chat); // Lưu thông tin cuộc trò chuyện hiện tại
+                  setCurrentParticipant(participantsInfo[chat.chatId]); // Lưu thông tin người tham gia
 
-      <h2>Gửi tin nhắn mới</h2>
-      <select
-        value={selectedUser}
-        onChange={(e) => setSelectedUser(e.target.value)}
+                  try {
+                    const messages = await fetchMessages(chat.chatId, token); // Gọi API để lấy tin nhắn
+                    setMessages(messages); // Lưu danh sách tin nhắn vào state
+                  } catch (err) {
+                    console.error("Lỗi khi lấy tin nhắn:", err);
+                  }
+                }}
+              >
+                <div className="chat-avatar">
+                  <img
+                    src={participant?.avatarUrl || "default-avatar.png"}
+                    alt="avatar"
+                  />
+                </div>
+                <div className="chat-info">
+                  <p className="chat-name">
+                    {participant
+                      ? `${participant.firstName} ${participant.lastName}`
+                      : "Người dùng"}
+                  </p>
+                  <p className="chat-preview">
+                    {chat.lastMessage || "Không có tin nhắn"}
+                  </p>
+                </div>
+                <span className="chat-time">
+                  {chat.lastUpdated
+                    ? (() => {
+                        try {
+                          // Chuyển đổi Firestore timestamp thành đối tượng Date
+                          const date = new Date(
+                            chat.lastUpdated.seconds * 1000
+                          ); // seconds * 1000 để chuyển thành milliseconds
+                          const now = new Date(); // Thời gian hiện tại
+                          const diffInMs = now - date; // Khoảng cách thời gian (milliseconds)
+                          const diffInMinutes = Math.floor(
+                            diffInMs / (1000 * 60)
+                          ); // Chuyển đổi sang phút
+                          const diffInHours = Math.floor(diffInMinutes / 60); // Chuyển đổi sang giờ
+
+                          if (diffInMinutes < 60) {
+                            return `${diffInMinutes} phút trước`;
+                          } else {
+                            return `${diffInHours} giờ trước`;
+                          }
+                        } catch (err) {
+                          console.error("Lỗi khi xử lý ngày giờ:", err);
+                          return "Không xác định";
+                        }
+                      })()
+                    : ""}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Chat main */}
+      <div className="chat-main">
+        {currentChat && currentParticipant ? (
+          <>
+            <div className="chat-header">
+              <div className="chat-user">
+                <div className="chat-user-avatar">
+                  <img
+                    src={currentParticipant.avatarUrl || "default-avatar.png"}
+                    alt="avatar"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      borderRadius: "50%",
+                    }}
+                  />
+                </div>
+                <div>
+                  <p className="chat-user-name">
+                    {currentParticipant.firstName} {currentParticipant.lastName}
+                  </p>
+                  <p className="chat-status">Đang hoạt động</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="chat-content">
+              {messages.map((msg) => (
+                <div
+                  key={msg.timestamp}
+                  className={`message ${msg.sender === uid ? "right" : "left"}`}
+                >
+                  <div className="msg">{msg.message}</div>
+                  <span className="chat-time">
+                    {msg.timestamp
+                      ? (() => {
+                          try {
+                            // Chuyển đổi Firestore timestamp thành đối tượng Date
+                            const date = new Date(msg.timestamp.seconds * 1000); // seconds * 1000 để chuyển thành milliseconds
+                            const now = new Date(); // Thời gian hiện tại
+                            const diffInMs = now - date; // Khoảng cách thời gian (milliseconds)
+                            const diffInMinutes = Math.floor(
+                              diffInMs / (1000 * 60)
+                            ); // Chuyển đổi sang phút
+                            const diffInHours = Math.floor(diffInMinutes / 60); // Chuyển đổi sang giờ
+
+                            if (diffInMinutes < 60) {
+                              return `${diffInMinutes} phút trước`;
+                            } else {
+                              return `${diffInHours} giờ trước`;
+                            }
+                          } catch (err) {
+                            console.error("Lỗi khi xử lý ngày giờ:", err);
+                            return "Không xác định";
+                          }
+                        })()
+                      : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="chat-input-area">
+              <input
+                type="text"
+                placeholder="Tin nhắn"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+              />
+              <button className="send-btn" onClick={handleSendMessage}>
+                <BsSendFill />
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="no-chat-selected">
+            <p>Chọn một cuộc trò chuyện để bắt đầu nhắn tin</p>
+          </div>
+        )}
+      </div>
+
+      {/* Modal thêm bạn */}
+      <Modal
+        isOpen={isUserModalOpen}
+        onRequestClose={() => setIsUserModalOpen(false)}
+        className="modal"
+        overlayClassName="overlay"
       >
-        <option value="">Chọn người dùng</option>
-        {allUsers
-          .filter((user) => user.uid !== uid) // Loại bỏ chính người dùng đang đăng nhập
-          .map((user) => (
-            <option key={user.uid} value={user.uid}>
-              {user.firstName} {user.lastName}
-            </option>
-          ))}
-      </select>
-      <textarea
-        value={newMessage}
-        onChange={(e) => setNewMessage(e.target.value)}
-        placeholder="Nhập tin nhắn..."
-      />
-      <button onClick={handleSendMessage}>Gửi tin nhắn</button>
+        <h3>Tìm bạn bằng email</h3>
+        <input
+          type="email"
+          value={searchEmail}
+          onChange={(e) => setSearchEmail(e.target.value)}
+          placeholder="Nhập email người dùng"
+        />
+        <button onClick={handleSearchUser}>Tìm</button>
 
-      <button onClick={handleLogout}>Đăng xuất</button>
+        {foundUser && (
+          <div className="user-result">
+            <p>
+              👤 {foundUser.lastName} {foundUser.firstName}
+            </p>
+            {isFriend === "accepted" && (
+              <button className="chat-btn">Nhắn tin</button>
+            )}
+            {isFriend === "pending" && (
+              <button className="pending-btn" disabled>
+                Đã gửi kết bạn
+              </button>
+            )}
+            {isFriend === "none" && (
+              <button className="add-btn" onClick={handleSendRequest}>
+                Kết bạn
+              </button>
+            )}
+          </div>
+        )}
+        {showNotFound && <p className="not-found-msg">Không tìm thấy</p>}
+      </Modal>
+
+      {/* Modal thông tin người dùng */}
+      <Modal
+        isOpen={isAccountModalOpen}
+        onRequestClose={() => setIsAccountModalOpen(false)}
+        className="account-modal"
+        overlayClassName="overlay"
+      >
+        {userInfo ? (
+          <div className="account-info">
+            <div className="cover-photo">
+              <img
+                src="https://cdn.statically.io/img/timelinecovers.pro/f=webp/facebook-cover/thumbs540/forest_in_the_morning-facebook-cover.jpg"
+                alt="cover"
+              />
+            </div>
+            <div className="avatar-section">
+              <img className="avatar" src={userInfo.avatarUrl} alt="avatar" />
+              <h2>
+                {userInfo.lastName} {userInfo.firstName} ✏️
+              </h2>
+            </div>
+            <div className="user-details">
+              <p>
+                <strong>Email:</strong> {userInfo.email}
+              </p>
+              <p>
+                <strong>Giới tính:</strong>{" "}
+                {userInfo.gender === "male" ? "Nam" : "Nữ"}
+              </p>
+              <p className="note">
+                Chỉ bạn bè có lưu số của bạn trong danh bạ máy xem được số này
+              </p>
+            </div>
+            <button className="update-btn">🔄 Cập nhật</button>
+          </div>
+        ) : (
+          <p style={{ color: "white", textAlign: "center" }}>
+            Đang tải thông tin...
+          </p>
+        )}
+      </Modal>
+
+      {/* Modal danh sách bạn bè */}
+      <Modal
+        isOpen={showFriends}
+        onRequestClose={() => setShowFriends(false)}
+        className="modal friendlist-modal"
+        overlayClassName="overlay"
+      >
+        <h2>Danh sách bạn bè</h2>
+        {friendList.length === 0 ? (
+          <p>Bạn chưa có bạn bè nào.</p>
+        ) : (
+          <ul className="friend-list">
+            {friendList.map((friend) => (
+              <li key={friend.id} className="friend-item">
+                <img
+                  src={friend.avatarUrl || "default-avatar.png"}
+                  alt="avatar"
+                  className="friend-avatar"
+                />
+                <span className="friend-name">
+                  {friend.firstName} {friend.lastName}
+                </span>
+                <button
+                  className="chat-btn"
+                  onClick={() => handleStartChat(friend)}
+                >
+                  Nhắn tin
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Modal>
     </div>
   );
-}
+};
+
+export default Home;

@@ -8,13 +8,19 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.CollectionReference;
+import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.QuerySnapshot;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseToken;
 import com.google.firebase.cloud.FirestoreClient;
@@ -80,6 +86,58 @@ public class UserController {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Lỗi khi lấy danh sách người dùng: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/find")
+    public ResponseEntity<?> findUserByEmail(@RequestParam String email) {
+        try {
+            // Truy vấn Firestore
+            ApiFuture<QuerySnapshot> future = firestore.collection("users")
+                    .whereEqualTo("email", email)
+                    .get();
+
+            // Lấy danh sách tài liệu
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments(); // Sử dụng getDocuments()
+            if (documents.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy người dùng");
+            }
+
+            // Lấy tài liệu đầu tiên
+            DocumentSnapshot userDoc = documents.get(0);
+            if (userDoc == null || userDoc.getData() == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy dữ liệu người dùng");
+            }
+
+            // Chuẩn bị dữ liệu trả về
+            Map<String, Object> userData = userDoc.getData();
+            userData.put("id", userDoc.getId()); // Thêm ID người dùng
+
+            return ResponseEntity.ok(userData);
+
+        } catch (Exception e) {
+            e.printStackTrace(); // Log chi tiết lỗi
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Lỗi khi tìm người dùng: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{uid}")
+    public ResponseEntity<?> getUserByUid(@PathVariable String uid) {
+        try {
+            Firestore firestore = FirestoreClient.getFirestore();
+            DocumentReference userRef = firestore.collection("users").document(uid);
+            DocumentSnapshot snapshot = userRef.get().get();
+
+            if (snapshot.exists()) {
+                return ResponseEntity.ok(snapshot.getData());
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("message", "Người dùng không tồn tại"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Lỗi khi lấy thông tin người dùng: " + e.getMessage()));
         }
     }
 }

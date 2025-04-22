@@ -32,8 +32,12 @@ export default function SignIn() {
         localStorage.setItem("uid", res.data.uid);
         localStorage.setItem("email", res.data.email);
 
+        // Xóa dữ liệu cũ
+        localStorage.removeItem("currentChat");
+        localStorage.removeItem("currentParticipant");
+
         // Chuyển hướng đến trang Home
-        setTimeout(() => navigate("/home"), 1000);
+        navigate("/home");
       } else {
         setMsg("❌ Đăng nhập thất bại.");
       }
