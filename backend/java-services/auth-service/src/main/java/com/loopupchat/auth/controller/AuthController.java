@@ -111,6 +111,7 @@ public class AuthController {
             if (snapshot.exists()) {
                 return ResponseEntity.ok(snapshot.getData());
             } else {
+
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("message", "Người dùng không tồn tại"));
             }
