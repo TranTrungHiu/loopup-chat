@@ -1,10 +1,12 @@
-"use client"
-const InviteTab= ({uid})=>{
-    console.log("uid inviteTab: "+uid)
-    return
-    (
+import React from 'react';
+import FriendRequests from '../component/FriendRequests'; // Đường dẫn đến component FriendRequests
 
-        <div>InviteTab</div>
-    )
-}
+const InviteTab = ({ uid, token }) => {
+  return (
+    <div className="invite-tab-container">
+      <FriendRequests uid={uid} token={token} />
+    </div>
+  );
+};
+
 export default InviteTab;

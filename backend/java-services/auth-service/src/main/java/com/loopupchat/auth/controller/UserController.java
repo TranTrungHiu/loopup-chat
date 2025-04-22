@@ -10,6 +10,7 @@ import com.google.cloud.firestore.CollectionReference;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.cloud.firestore.QuerySnapshot;
 import com.google.firebase.auth.FirebaseAuth;
@@ -89,37 +90,32 @@ public class UserController {
         }
     }
 
-    @GetMapping("/find")
-    public ResponseEntity<?> findUserByEmail(@RequestParam String email) {
+    @GetMapping("/search")
+    public ResponseEntity<?> searchUserByEmail(@RequestParam String email) {
         try {
-            // Truy vấn Firestore
-            ApiFuture<QuerySnapshot> future = firestore.collection("users")
-                    .whereEqualTo("email", email)
-                    .get();
+            // Tìm người dùng qua email trong Firestore
+            CollectionReference usersRef = firestore.collection("users");
+            Query query = usersRef.whereEqualTo("email", email);
+            ApiFuture<QuerySnapshot> querySnapshot = query.get();
+            List<QueryDocumentSnapshot> documents = querySnapshot.get().getDocuments();
 
-            // Lấy danh sách tài liệu
-            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
             if (documents.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy người dùng");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("message", "Không tìm thấy người dùng với email này"));
             }
 
-            // Lấy tài liệu đầu tiên
+            // Lấy thông tin người dùng đầu tiên tìm thấy
             DocumentSnapshot userDoc = documents.get(0);
-            if (userDoc == null || userDoc.getData() == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy dữ liệu người dùng");
-            }
-
-            // Chuẩn bị dữ liệu trả về
             Map<String, Object> userData = userDoc.getData();
-            userData.put("id", userDoc.getId()); // Thêm ID người dùng vào response để client dùng check friendship
-            System.out.println("Email tìm kiếm: " + email);
+
+            // Thêm ID vào dữ liệu
+            userData.put("id", userDoc.getId());
 
             return ResponseEntity.ok(userData);
-
         } catch (Exception e) {
-            e.printStackTrace(); // Log chi tiết lỗi
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Lỗi khi tìm người dùng: " + e.getMessage());
+                    .body(Map.of("message", "Lỗi khi tìm kiếm người dùng: " + e.getMessage()));
         }
     }
 
