@@ -1,76 +1,80 @@
-import React, { useState } from "react";
-import Modal from "react-modal";
-import { FaSearch } from "react-icons/fa";
-import "../pages/styles/FindFriendModal.css"; // Đường dẫn đến file CSS của bạn
+import React, { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Avatar,
+  Divider,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  Alert,
+  InputAdornment,
+  CircularProgress
+} from '@mui/material';
+import {
+  Search as SearchIcon,
+  PersonAdd as PersonAddIcon,
+  Chat as ChatIcon,
+  Person as PersonIcon
+} from '@mui/icons-material';
 
 const FindFriendModal = ({ isOpen, onClose, uid, token }) => {
-  const [searchEmail, setSearchEmail] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
+  const [searchEmail, setSearchEmail] = useState('');
   const [foundUser, setFoundUser] = useState(null);
-  const [friendStatus, setFriendStatus] = useState("unknown"); // unknown, none, pending, accepted
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [isFriend, setIsFriend] = useState(false);
+  const [showNotFound, setShowNotFound] = useState(false);
+  const [friendList, setFriendList] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchPerformed, setSearchPerformed] = useState(false);
 
-  // Hàm tìm kiếm người dùng qua email
-  const handleSearchUser = async () => {
-    if (!searchEmail.trim()) {
-      setErrorMessage("Vui lòng nhập email để tìm kiếm");
+  useEffect(() => {
+    if (isOpen) {
+      fetchFriends();
+    }
+  }, [isOpen, token, uid]);
+
+  const fetchFriends = async () => {
+    if (!uid) {
+      console.error("UID không tồn tại trong localStorage.");
       return;
     }
-
-    setIsSearching(true);
-    setErrorMessage("");
-    setFoundUser(null);
-    setFriendStatus("unknown");
-    setSuccessMessage("");
-
     try {
-      // Gọi API tìm kiếm người dùng
-      const response = await fetch(
-        `http://localhost:8080/api/user/search?email=${encodeURIComponent(searchEmail)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Không tìm thấy người dùng với email này");
+      setIsLoading(true);
+      const res = await fetch(`http://localhost:8080/api/friends/list/${uid}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) {
+        throw new Error(`Lỗi HTTP: ${res.status}`);
       }
-
-      const data = await response.json();
-
-      // Kiểm tra kết quả
-      if (!data || !data.id) {
-        setErrorMessage("Không tìm thấy người dùng với email này");
-        return;
-      }
-
-      // Không cho phép tìm kiếm chính mình
-      if (data.id === uid) {
-        setErrorMessage("Đây là email của bạn");
-        return;
-      }
-
-      console.log("Tìm thấy người dùng:", data);
-      setFoundUser(data);
-
-      // Kiểm tra trạng thái kết bạn
-      await checkFriendStatus(data.id);
-    } catch (error) {
-      console.error("Lỗi khi tìm kiếm:", error);
-      setErrorMessage(error.message || "Lỗi khi tìm kiếm người dùng");
+      const data = await res.json();
+      console.log("Danh sách bạn bè:", data);
+      setFriendList(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Lỗi lấy danh sách bạn bè:", err);
+      setFriendList([]);
     } finally {
-      setIsSearching(false);
+      setIsLoading(false);
     }
   };
 
-  // Kiểm tra trạng thái kết bạn
-  const checkFriendStatus = async (targetUserId) => {
+  const handleSearchUser = async () => {
+    if (!searchEmail) return;
+    
     try {
-      const response = await fetch(
-        `http://localhost:8080/api/friends/status?user1=${uid}&user2=${targetUserId}`,
+      setIsLoading(true);
+      setSearchPerformed(true);
+      
+      const res = await fetch(
+        `http://localhost:8080/api/user/find?email=${searchEmail}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -78,153 +82,268 @@ const FindFriendModal = ({ isOpen, onClose, uid, token }) => {
         }
       );
 
-      if (!response.ok) {
-        console.error("Lỗi khi kiểm tra trạng thái kết bạn");
-        setFriendStatus("unknown");
+      if (!res.ok) {
+        console.warn("Người dùng không tìm thấy");
+        setFoundUser(null);
+        setShowNotFound(true);
+        setTimeout(() => setShowNotFound(false), 3000);
         return;
       }
 
-      const statusData = await response.json();
-      console.log("Trạng thái kết bạn:", statusData);
+      const user = await res.json();
+      console.log("Người dùng tìm được:", user);
+      setFoundUser(user);
 
-      // Cập nhật trạng thái kết bạn
-      if (statusData.status) {
-        setFriendStatus(statusData.status);
-      } else {
-        setFriendStatus("none");
-      }
-    } catch (error) {
-      console.error("Lỗi khi kiểm tra trạng thái kết bạn:", error);
-      setFriendStatus("unknown");
+      const checkRes = await fetch(
+        `http://localhost:8080/api/friends/status/${uid}/${user.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const result = await checkRes.json();
+      console.log("Trạng thái bạn bè:", result);
+      setIsFriend(result.status);
+    } catch (err) {
+      console.error("Lỗi tìm người dùng:", err);
+      setFoundUser(null);
+      setShowNotFound(true);
+      setTimeout(() => setShowNotFound(false), 3000);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Gửi lời mời kết bạn
-  const handleSendFriendRequest = async () => {
-    if (!foundUser || !foundUser.id) return;
-
+  const handleSendRequest = async () => {
     try {
-      setIsSearching(true);
-      setErrorMessage("");
-      setSuccessMessage("");
-
-      const response = await fetch("http://localhost:8080/api/friends/request", {
+      setIsLoading(true);
+      const res = await fetch("http://localhost:8080/api/friends/request", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          fromUserId: uid,
-          toUserId: foundUser.id,
+          userId1: uid,
+          userId2: foundUser.id,
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Lỗi khi gửi lời mời kết bạn");
+      if (!res.ok) {
+        const errorMessage = await res.text();
+        console.error("Lỗi gửi lời mời kết bạn:", errorMessage);
+        alert(errorMessage);
+        return;
       }
 
-      console.log("Đã gửi lời mời kết bạn");
-      setFriendStatus("pending");
-      setSuccessMessage("Đã gửi lời mời kết bạn thành công!");
-    } catch (error) {
-      console.error("Lỗi khi gửi lời mời kết bạn:", error);
-      setErrorMessage(error.message || "Không thể gửi lời mời kết bạn");
+      setIsFriend("pending");
+      alert("Lời mời kết bạn đã được gửi.");
+    } catch (err) {
+      console.error("Lỗi gửi lời mời kết bạn:", err);
     } finally {
-      setIsSearching(false);
+      setIsLoading(false);
     }
   };
 
-  // Xử lý khi nhấn Enter trong ô tìm kiếm
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      handleSearchUser();
+  const handleStartChat = async (friend) => {
+    try {
+      setIsLoading(true);
+      const res = await fetch("http://localhost:8080/api/chats", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          user1: uid,
+          user2: friend.id,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Lỗi từ API:", errorText);
+        throw new Error("Lỗi khi tạo hoặc lấy cuộc trò chuyện");
+      }
+
+      onClose();
+
+    } catch (err) {
+      console.error("Lỗi khi bắt đầu cuộc trò chuyện:", err);
+      alert("Không thể bắt đầu cuộc trò chuyện, vui lòng thử lại sau.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onRequestClose={onClose}
-      className="find-friend-modal"
-      overlayClassName="find-friend-overlay"
-      contentLabel="Tìm bạn qua email"
+    <Dialog 
+      open={isOpen} 
+      onClose={onClose} 
+      fullWidth 
+      maxWidth="sm"
+      PaperProps={{
+        elevation: 3,
+        sx: { borderRadius: 2 }
+      }}
     >
-      <div className="find-friend-header">
-        <h2>Tìm bạn qua email</h2>
-        <button className="close-button" onClick={onClose}>
-          &times;
-        </button>
-      </div>
-
-      <div className="find-friend-content">
-        <div className="search-container">
-          <input
-            type="email"
+      <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 2 }}>
+        Tìm bạn
+      </DialogTitle>
+      
+      <DialogContent sx={{ py: 3 }}>
+        <Box sx={{ mb: 3 }}>
+          <TextField
+            fullWidth
+            label="Email người dùng"
+            variant="outlined"
             value={searchEmail}
             onChange={(e) => setSearchEmail(e.target.value)}
-            placeholder="Nhập email của bạn bè"
-            onKeyDown={handleKeyDown}
-            disabled={isSearching}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSearchUser();
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="primary" />
+                </InputAdornment>
+              ),
+            }}
           />
-          <button
-            className="search-button"
-            onClick={handleSearchUser}
-            disabled={isSearching}
-          >
-            {isSearching ? "Đang tìm..." : "Tìm kiếm"}
-          </button>
-        </div>
+          
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+            <Button 
+              variant="contained" 
+              onClick={handleSearchUser}
+              disabled={isLoading || !searchEmail}
+              startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
+            >
+              Tìm kiếm
+            </Button>
+          </Box>
+        </Box>
 
-        {errorMessage && <p className="error-message">{errorMessage}</p>}
-        {successMessage && <p className="success-message">{successMessage}</p>}
+        {isLoading && !searchPerformed && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
+            <CircularProgress />
+          </Box>
+        )}
+        
+        {searchPerformed && showNotFound && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Không tìm thấy người dùng với email này
+          </Alert>
+        )}
 
         {foundUser && (
-          <div className="user-result">
-            <div className="user-info">
-              <div 
-                className="user-avatar"
-                style={{
-                  backgroundImage: foundUser.avatarUrl ? `url(${foundUser.avatarUrl})` : undefined,
-                  backgroundColor: !foundUser.avatarUrl ? '#' + Math.floor(Math.random()*16777215).toString(16) : undefined
-                }}
-              >
-                {!foundUser.avatarUrl && `${foundUser.firstName?.charAt(0) || ''}${foundUser.lastName?.charAt(0) || ''}`.toUpperCase()}
-              </div>
-              <div className="user-details">
-                <h3>
-                  {foundUser.firstName} {foundUser.lastName}
-                </h3>
-                <p>{foundUser.email}</p>
-              </div>
-            </div>
-
-            <div className="action-buttons">
-              {friendStatus === "accepted" && (
-                <button className="already-friend-button" disabled>
-                  Đã là bạn bè
-                </button>
-              )}
-              {friendStatus === "pending" && (
-                <button className="pending-button" disabled>
-                  Đã gửi lời mời
-                </button>
-              )}
-              {(friendStatus === "none" || friendStatus === "unknown") && (
-                <button
-                  className="add-friend-button"
-                  onClick={handleSendFriendRequest}
-                  disabled={isSearching}
+          <Box sx={{ 
+            p: 2, 
+            border: 1, 
+            borderColor: 'divider', 
+            borderRadius: 1, 
+            mb: 2 
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+                {foundUser.firstName ? foundUser.firstName.charAt(0) : <PersonIcon />}
+              </Avatar>
+              <Typography variant="subtitle1">
+                {foundUser.lastName} {foundUser.firstName}
+              </Typography>
+            </Box>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              {isFriend === "accepted" && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<ChatIcon />}
+                  onClick={() => handleStartChat(foundUser)}
+                  disabled={isLoading}
                 >
-                  {isSearching ? "Đang gửi..." : "Gửi lời mời kết bạn"}
-                </button>
+                  Nhắn tin
+                </Button>
               )}
-            </div>
-          </div>
+              {isFriend === "pending" && (
+                <Button
+                  variant="outlined"
+                  disabled
+                >
+                  Đã gửi kết bạn
+                </Button>
+              )}
+              {isFriend === "none" && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<PersonAddIcon />}
+                  onClick={handleSendRequest}
+                  disabled={isLoading}
+                >
+                  Kết bạn
+                </Button>
+              )}
+            </Box>
+          </Box>
         )}
-      </div>
-    </Modal>
+
+        <Divider sx={{ my: 3 }} />
+        
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          Danh sách bạn bè
+        </Typography>
+        
+        {friendList.length === 0 ? (
+          <Box sx={{ textAlign: 'center', py: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Bạn chưa có bạn bè nào
+            </Typography>
+          </Box>
+        ) : (
+          <List sx={{ 
+            maxHeight: 300, 
+            overflow: 'auto',
+            bgcolor: 'background.paper',
+            borderRadius: 1,
+            border: 1,
+            borderColor: 'divider'
+          }}>
+            {friendList.map((friend) => (
+              <ListItem 
+                key={friend.id}
+                secondaryAction={
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<ChatIcon />}
+                    onClick={() => handleStartChat(friend)}
+                  >
+                    Chat
+                  </Button>
+                }
+              >
+                <ListItemAvatar>
+                  <Avatar sx={{ bgcolor: 'primary.main' }}>
+                    {friend.firstName ? friend.firstName.charAt(0).toUpperCase() : <PersonIcon />}
+                  </Avatar>
+                </ListItemAvatar>
+                <ListItemText 
+                  primary={`${friend.lastName} ${friend.firstName}`}
+                  secondary={friend.email || ""}
+                />
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </DialogContent>
+      
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={onClose} variant="outlined">
+          Đóng
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 

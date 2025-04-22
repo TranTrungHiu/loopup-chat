@@ -62,27 +62,63 @@ export const fetchChats = async (token) => {
       timeout: 10000
     });
     
-    // Lọc danh sách chat ở phía client để đảm bảo chỉ lấy chat của người dùng hiện tại
+    // Lọc danh sách chat ở phía client
     const allChats = response.data;
-    let userChats = allChats;
+    let userChats = [];
     
-    // Nếu API không lọc sẵn, thì lọc ở client
+    // Lọc chats dựa trên ID người dùng và kiểm tra xem có tin nhắn không
     if (Array.isArray(allChats)) {
-      userChats = allChats.filter(chat => {
-        // Kiểm tra xem chatId có chứa ID người dùng hiện tại không
+      for (const chat of allChats) {
+        // Kiểm tra chatId chứa ID người dùng hiện tại
         if (chat.chatId && chat.chatId.includes(currentUserId)) {
-          return true;
-        }
-        
+          // Kiểm tra xem chat này có messages không
+          try {
+            const messagesResponse = await axios.get(
+              `http://localhost:8080/api/messages/${chat.chatId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+                timeout: 5000
+              }
+            );
+            
+            const messages = messagesResponse.data;
+            // Chỉ thêm vào danh sách chat nếu có ít nhất một tin nhắn
+            if (Array.isArray(messages) && messages.length > 0) {
+              userChats.push(chat);
+            }
+          } catch (error) {
+            console.error(`Lỗi khi kiểm tra tin nhắn cho chat ${chat.chatId}:`, error);
+            // Nếu có lỗi khi kiểm tra tin nhắn, ta vẫn giữ nguyên chat này để an toàn
+          }
+        } 
         // Hoặc kiểm tra mảng participants nếu có
-        if (chat.participants && Array.isArray(chat.participants)) {
-          return chat.participants.includes(currentUserId);
+        else if (chat.participants && Array.isArray(chat.participants) && chat.participants.includes(currentUserId)) {
+          // Tương tự kiểm tra messages
+          try {
+            const messagesResponse = await axios.get(
+              `http://localhost:8080/api/messages/${chat.chatId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+                timeout: 5000
+              }
+            );
+            
+            const messages = messagesResponse.data;
+            // Chỉ thêm vào danh sách chat nếu có ít nhất một tin nhắn
+            if (Array.isArray(messages) && messages.length > 0) {
+              userChats.push(chat);
+            }
+          } catch (error) {
+            console.error(`Lỗi khi kiểm tra tin nhắn cho chat ${chat.chatId}:`, error);
+          }
         }
-        
-        return false;
-      });
+      }
       
-      console.log(`Đã lọc ${userChats.length}/${allChats.length} cuộc trò chuyện của người dùng ${currentUserId}`);
+      console.log(`Đã lọc ${userChats.length}/${allChats.length} cuộc trò chuyện có tin nhắn của người dùng ${currentUserId}`);
     }
     
     return userChats;

@@ -1,5 +1,38 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import "./styles/Home.css";
+// Material-UI imports
+import {
+  Button,
+  IconButton,
+  TextField,
+  AppBar,
+  Toolbar,
+  Typography,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Avatar,
+  Paper,
+  ThemeProvider,
+  createTheme,
+} from "@mui/material";
+// Material UI Icons
+import {
+  Settings as SettingsIcon,
+  Search as SearchIcon,
+  Send as SendIcon,
+  PersonAdd as PersonAddIcon,
+  Group as GroupIcon,
+  Refresh as RefreshIcon,
+  Chat as ChatIcon,
+  People as PeopleIcon,
+  Person as PersonIcon,
+  ExitToApp as LogoutIcon,
+} from "@mui/icons-material";
+// Existing imports
 import {
   FaCog,
   FaUserPlus,
@@ -28,8 +61,13 @@ import {
   fetchMessages,
   fetchParticipantInfo,
   sendMessage,
+  fetchUserByUid,
 } from "../services/chatService";
 import ChatList from "../component/ChatList";
+// For timestamp formatting
+import { formatDistanceToNow, format } from "date-fns";
+import { vi } from "date-fns/locale";
+
 Modal.setAppElement("#root"); // Đảm bảo modal hoạt động đúng
 
 const Home = () => {
@@ -50,6 +88,7 @@ const Home = () => {
   const [showNotFound, setShowNotFound] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [firebaseConnectionError, setFirebaseConnectionError] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [chats, setChats] = useState([]);
   const [participantsInfo, setParticipantsInfo] = useState({});
@@ -139,6 +178,7 @@ const Home = () => {
               errorData.includes("Credentials failed") ||
               errorData.includes("UNAVAILABLE"))
           ) {
+            setFirebaseConnectionError(true);
             throw new Error(
               "Lỗi xác thực Firebase. Vui lòng liên hệ quản trị viên hoặc thử đăng nhập lại."
             );
@@ -312,11 +352,17 @@ const Home = () => {
       const chatData = await res.json();
       console.log("Cuộc trò chuyện:", chatData);
 
-      setCurrentChat(chatData);
-      setCurrentParticipant(friend);
-      setShowFriends(false);
+      // Set the tab first to ensure chat view is displayed
       setTabs("Chat");
 
+      // Then set current chat and participant
+      setCurrentChat(chatData);
+      setCurrentParticipant(friend);
+
+      // Close the friends modal
+      setShowFriends(false);
+
+      // Load messages for the chat
       loadMessages(chatData.chatId);
     } catch (err) {
       console.error("Lỗi khi bắt đầu cuộc trò chuyện:", err);
@@ -638,7 +684,17 @@ const Home = () => {
               <>
                 <div className="chat-header">
                   <div className="chat-user">
-                    <div className="chat-user-avatar"></div>
+                    <div className="chat-user-avatar">
+                      <img
+                        src={
+                          currentParticipant.avatarUrl || "/default-avatar.png"
+                        }
+                        alt="avatar"
+                        onError={(e) => {
+                          e.target.src = "/default-avatar.png";
+                        }}
+                      />
+                    </div>
                     <div>
                       <p className="chat-user-name">
                         {currentParticipant.firstName}{" "}
@@ -691,11 +747,35 @@ const Home = () => {
                           </div>
                           <div className="message-time">
                             {msg.timestamp
-                              ? new Date(msg.timestamp).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  hour12: true,
-                                })
+                              ? (() => {
+                                  try {
+                                    // Check if timestamp is a Firestore timestamp object
+                                    if (
+                                      msg.timestamp &&
+                                      msg.timestamp.seconds
+                                    ) {
+                                      return format(
+                                        new Date(msg.timestamp.seconds * 1000),
+                                        "HH:mm:ss",
+                                        { locale: vi }
+                                      );
+                                    }
+                                    // Handle regular Date objects or ISO strings
+                                    const date = new Date(msg.timestamp);
+                                    if (!isNaN(date.getTime())) {
+                                      return format(date, "HH:mm:ss", {
+                                        locale: vi,
+                                      });
+                                    }
+                                    return "";
+                                  } catch (error) {
+                                    console.error(
+                                      "Error formatting date:",
+                                      error
+                                    );
+                                    return "";
+                                  }
+                                })()
                               : ""}
                           </div>
                         </div>

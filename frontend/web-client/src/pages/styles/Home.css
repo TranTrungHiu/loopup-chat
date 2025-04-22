@@ -115,35 +115,38 @@
     padding: 10px;
     cursor: pointer;
     border-bottom: 1px solid #ddd;
-    transition: background-color 0.2s;
+    transition: all 0.2s ease;
 }
 .chat-item:hover {
-    background-color: #e6e6e6;
+    background-color: #f0f0f0;
 }
-.chat-avatar img {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    margin-right: 10px;
-    padding: 12px;
-    background: #ffffff;
-    margin-bottom: 8px;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: background-color 0.2s;
-}
-.chat-item:hover {
-    background-color: #f9f9f9; /* Thêm hiệu ứng hover */
+.chat-item.active {
+    background-color: #e6f2ff;
+    border-left: 3px solid #1a73e8;
 }
 .chat-avatar {
-    width: 40px;
-    height: 40px;
-    background-color: #ccc;
+    position: relative;
+    width: 45px;
+    height: 45px;
     border-radius: 50%;
-    margin-right: 10px;
-    background-image: url('https://via.placeholder.com/40'); /* Thêm ảnh đại diện mặc định */
-    background-size: cover;
-    background-position: center;
+    margin-right: 12px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.chat-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.chat-avatar .status-dot {
+    position: absolute;
+    bottom: 3px;
+    right: 3px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #4caf50;
+    border: 2px solid #fff;
 }
 .chat-info {
     flex: 1;
@@ -190,7 +193,7 @@
     background: #dfe3ec;
 }
 .chat-header {
-    padding: 10px;
+    padding: 10px 15px;
     background: #fafafa;
     border-bottom: 1px solid #ccc;
 }
@@ -199,23 +202,30 @@
     align-items: center;
 }
 .chat-user-avatar {
-    width: 40px !important;
-    height: 40px !important;
-    background: gray !important;
-    border-radius: 50% !important;
-    margin-right: 10px !important;
-  }
-
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 15px;
+    overflow: hidden;
+    border: 1px solid #eaeaea;
+}
+.chat-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
 .chat-user-name {
     margin: 0;
     font-weight: bold;
+    font-size: 16px;
 }
 .chat-status {
     font-size: 12px;
-    color: green;
+    color: #4caf50;
+    margin: 0;
 }
 
-/* Chat content */
+/* Chat content with enhanced message styling */
 .chat-content {
     flex: 1;
     padding: 10px;
@@ -223,51 +233,92 @@
     display: flex;
     flex-direction: column;
 }
+
+/* Message styling with avatar support */
 .message {
     display: flex;
     flex-direction: column;
-    max-width: 60%;
+    max-width: 70%;
     margin: 5px 0;
     padding: 10px;
-    border-radius: 10px;
+    border-radius: 15px;
     font-size: 14px;
-}
-.message.right {
-    align-self: flex-end;
-    background-color: #dcf8c6; /* Màu tin nhắn gửi */
-}
-.message.left {
-    align-self: flex-start;
-    background-color: #fff; /* Màu tin nhắn nhận */
-}
-.message-time {
-    font-size: 12px;
-    color: #888;
-    margin-top: 5px;
-    max-width: 60%;
-    padding: 10px;
-    border-radius: 10px;
-    margin-bottom: 10px;
     position: relative;
-    word-wrap: break-word;
+    margin-bottom: 15px;
 }
+
 .message.right {
     align-self: flex-end;
-    background: #0d3878;
+    background-color: #0d3878;
     color: white;
+    border-bottom-right-radius: 5px;
 }
+
 .message.left {
     align-self: flex-start;
-    background: #ffffff;
-    border: 1px solid #ccc;
+    background-color: #ffffff;
+    color: #333;
+    border: 1px solid #e0e0e0;
+    border-bottom-left-radius: 5px;
+    margin-left: 35px; /* Space for avatar */
 }
+
+.message.left::before {
+    content: "";
+    position: absolute;
+    left: -35px;
+    top: 0;
+    width: 30px;
+    height: 30px;
+    background-size: cover;
+    background-position: center;
+    border-radius: 50%;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>');
+    background-color: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.message-avatar {
+    position: absolute;
+    left: -35px;
+    top: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
 .msg {
-    margin-bottom: 5px;
+    margin-bottom: 3px;
+    word-break: break-word;
 }
+
+/* Enhanced timestamp display */
 .message-time {
     font-size: 11px;
-    color: #ccc;
+    color: rgba(200, 200, 200, 0.8);
     text-align: right;
+    margin-top: 2px;
+}
+
+.message.left .message-time {
+    color: #aaa;
+}
+
+/* Pending and error message states */
+.message.pending {
+    opacity: 0.7;
+}
+
+.message.error {
+    border: 1px solid #ff6b6b;
+}
+
+.status-indicator {
+    margin-left: 5px;
+    font-size: 12px;
 }
 
 /* Chat input */

@@ -62,11 +62,34 @@ const ChatItem = React.memo(({
       </div>
       <span className="chat-time">
         {chat.lastUpdated
-          ? new Date(chat.lastUpdated).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: false,
-            })
+          ? (() => {
+              try {
+                // Chuyển đổi Firestore timestamp thành đối tượng Date
+                const date = new Date(
+                  chat.lastUpdated.seconds ? chat.lastUpdated.seconds * 1000 : chat.lastUpdated
+                );
+                
+                if (isNaN(date.getTime())) {
+                  return "";
+                }
+                
+                const now = new Date(); // Thời gian hiện tại
+                const diffInMs = now - date; // Khoảng cách thời gian (milliseconds)
+                const diffInMinutes = Math.floor(
+                  diffInMs / (1000 * 60)
+                ); // Chuyển đổi sang phút
+                const diffInHours = Math.floor(diffInMinutes / 60); // Chuyển đổi sang giờ
+
+                if (diffInMinutes < 60) {
+                  return `${diffInMinutes} phút trước`;
+                } else {
+                  return `${diffInHours} giờ trước`;
+                }
+              } catch (error) {
+                console.error("Error formatting date:", error);
+                return "";
+              }
+            })()
           : ""}
       </span>
     </div>

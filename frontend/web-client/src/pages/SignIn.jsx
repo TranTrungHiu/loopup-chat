@@ -1,138 +1,238 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import "../pages/styles/SignIn.css"; // Ensure you have the correct path to your CSS file
+// Material-UI imports
+import {
+  Container,
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Paper,
+  Grid,
+  InputAdornment,
+  IconButton,
+  Alert,
+  CircularProgress,
+} from "@mui/material";
+import {
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
+  Email as EmailIcon,
+  Lock as LockIcon,
+} from "@mui/icons-material";
 
-export default function SignIn() {
+const SignIn = () => {
   const [email, setEmail] = useState("");
-  const [pass, setPass] = useState("");
-  const [msg, setMsg] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
 
-  const handleRegister = async () => {
-    navigate("/signup");
-  };
+  useEffect(() => {
+    const token = localStorage.getItem("idToken");
+    if (token) {
+      navigate("/home");
+    }
+  }, [navigate]);
 
-  const handleSignIn = async () => {
+  const handleSignIn = async (e) => {
+    e.preventDefault();
+
+    if (!email || !password) {
+      setError("Vui lòng nhập email và mật khẩu");
+      return;
+    }
+
     try {
-      const userCred = await signInWithEmailAndPassword(auth, email, pass);
-      const user = userCred.user;
+      setError("");
+      setLoading(true);
+
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
+
+      // Get the ID token
       const token = await user.getIdToken();
 
-      const res = await axios.post("http://localhost:8080/api/auth/login", {
-        idToken: token,
-      });
+      localStorage.setItem("idToken", token);
+      localStorage.setItem("uid", user.uid);
 
-      if (res.status === 200) {
-        // Lưu token và uid vào localStorage
-        localStorage.setItem("idToken", token);
-        localStorage.setItem("uid", res.data.uid);
-        localStorage.setItem("email", res.data.email);
+      navigate("/home");
+    } catch (error) {
+      console.error("Error signing in:", error.message);
 
-        // Xóa dữ liệu cũ
-        localStorage.removeItem("currentChat");
-        localStorage.removeItem("currentParticipant");
-
-        // Chuyển hướng đến trang Home
-        navigate("/home");
-      } else {
-        setMsg("❌ Đăng nhập thất bại.");
+      // Handle specific error codes with user-friendly messages
+      switch (error.code) {
+        case "auth/invalid-email":
+          setError("Email không hợp lệ");
+          break;
+        case "auth/user-disabled":
+          setError("Tài khoản này đã bị vô hiệu hóa");
+          break;
+        case "auth/user-not-found":
+          setError("Tài khoản không tồn tại");
+          break;
+        case "auth/wrong-password":
+          setError("Mật khẩu không chính xác");
+          break;
+        case "auth/too-many-requests":
+          setError("Quá nhiều yêu cầu. Vui lòng thử lại sau");
+          break;
+        default:
+          setError("Đăng nhập không thành công. Vui lòng thử lại");
       }
-    } catch (err) {
-      console.error(err);
-      setMsg("❌ " + (err.response?.data || err.message));
+    } finally {
+      setLoading(false);
     }
   };
 
-  return (
-    <div className="main-container">
-      <div className="wrapper">
-        <div className="img" />
-      </div>
-      <div className="box" />
-      <div className="box-2">
-        <div className="section">
-          <div className="img-2" />
-          <span className="text">vui lòng đăng nhập để tiếp tục</span>
+  const handleTogglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
 
-          <div className="wrapper-2">
-            <div className="pic" />
-            <input
-              type="email"
-              placeholder="Nhập email của bạn"
+  return (
+    <Container maxWidth="sm">
+      <Box
+        sx={{
+          mt: 8,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
+        <Paper
+          elevation={3}
+          sx={{
+            p: 4,
+            width: "100%",
+            borderRadius: 2,
+            background: "rgba(255, 255, 255, 0.9)",
+          }}
+        >
+          <Box
+            sx={{
+              mb: 3,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <Typography
+              component="h1"
+              variant="h4"
+              sx={{
+                fontWeight: "bold",
+                color: "primary.main",
+                mb: 1,
+              }}
+            >
+              LOOPUP
+            </Typography>
+            <Typography component="h2" variant="h6">
+              Đăng nhập
+            </Typography>
+          </Box>
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Box component="form" onSubmit={handleSignIn} sx={{ mt: 1 }}>
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="email"
+              label="Địa chỉ Email"
+              name="email"
+              autoComplete="email"
+              autoFocus
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="input-box"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <EmailIcon color="primary" />
+                  </InputAdornment>
+                ),
+              }}
             />
-          </div>
 
-          <div className="box-3">
-            <div className="img-3" />
-            <div className="pic-2" />
-            <input
-              type="password"
-              placeholder="Nhập mật khẩu"
-              value={pass}
-              onChange={(e) => setPass(e.target.value)}
-              className="input-box"
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="password"
+              label="Mật khẩu"
+              type={showPassword ? "text" : "password"}
+              id="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <LockIcon color="primary" />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={handleTogglePasswordVisibility}
+                      edge="end"
+                    >
+                      {showPassword ? (
+                        <VisibilityOffIcon />
+                      ) : (
+                        <VisibilityIcon />
+                      )}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
-          </div>
 
-          <div className="pic-3" />
-          <div className="box-4">
-            <span className="text-4">Quên</span>
-            <span className="text-5"> mật khẩu</span>
-          </div>
-          <span className="text-6">Nhớ mật khẩu</span>
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              sx={{ mt: 3, mb: 2, py: 1.5, fontSize: "1rem" }}
+              disabled={loading}
+            >
+              {loading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                "Đăng nhập"
+              )}
+            </Button>
 
-          <div className="wrapper-3">
-            <button onClick={handleSignIn}>
-              <div className="svg-wrapper-1">
-                <div className="svg-wrapper">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    width="24"
-                    height="24"
-                  >
-                    <path fill="none" d="M0 0h24v24H0z"></path>
-                    <path
-                      fill="currentColor"
-                      d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z"
-                    ></path>
-                  </svg>
-                </div>
-              </div>
-              <span>LOGIN</span>
-            </button>
-          </div>
-
-          <p style={{ color: "red", marginTop: "10px" }}>{msg}</p>
-
-          <span className="text-a">hay tiếp tục </span>
-          <div className="pic-6" />
-          <div className="pic-7" />
-          <div className="section-2">
-            <div className="pic-8" />
-          </div>
-          <div className="group-2">
-            <div className="pic-9" />
-          </div>
-        </div>
-
-        <div className="section-3">
-          <span className="text-b">Bạn chưa có tài khoản ?</span>
-          <span className="text-c" onClick={handleRegister}>
-            {" "}
-            Đăng ký ngay
-          </span>
-        </div>
-      </div>
-
-      <span className="text-d">Loopup xin chào</span>
-    </div>
+            <Grid container justifyContent="flex-end">
+              <Grid item>
+                <Link
+                  to="/signup"
+                  style={{ color: "#6b59cc", textDecoration: "none" }}
+                >
+                  <Typography variant="body2">
+                    Chưa có tài khoản? Đăng ký ngay
+                  </Typography>
+                </Link>
+              </Grid>
+            </Grid>
+          </Box>
+        </Paper>
+      </Box>
+    </Container>
   );
-}
+};
+
+export default SignIn;
