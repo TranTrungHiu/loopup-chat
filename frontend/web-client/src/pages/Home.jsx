@@ -414,6 +414,7 @@ const Home = () => {
     try {
       console.log(`Đang tải tin nhắn cho chat ${chatId}`);
       const messagesData = await fetchMessages(chatId, token);
+      console.log("Tin nhắn đã tải:", messagesData);
       console.log(`Nhận được ${messagesData?.length || 0} tin nhắn`);
       setMessages(Array.isArray(messagesData) ? messagesData : []);
     } catch (err) {
@@ -718,69 +719,118 @@ const Home = () => {
                       </button>
                     </div>
                   ) : messages && messages.length > 0 ? (
-                    messages.map((msg, index) => {
-                      const isCurrentUser =
-                        msg.sender === uid ||
-                        msg.senderId === uid ||
-                        msg.senderId === "1";
+                    <div className="message-container">
+                      {messages.map((msg, index) => {
+                        // Determine if current user is the sender of this message
+                        const isCurrentUser = msg.sender === uid;
 
-                      const isPending = msg.pending === true;
-                      const hasError = msg.error === true;
+                        // Status indicators
+                        const isPending = msg.pending === true;
+                        const hasError = msg.error === true;
 
-                      return (
-                        <div
-                          key={msg.id || `msg-${index}`}
-                          className={`message ${
-                            isCurrentUser ? "right" : "left"
-                          } ${isPending ? "pending" : ""} ${
-                            hasError ? "error" : ""
-                          }`}
-                        >
-                          <div className="msg">
-                            {msg.message || msg.text || "Không có nội dung"}
-                            {isPending && (
-                              <span className="status-indicator">⏳</span>
-                            )}
-                            {hasError && (
-                              <span className="status-indicator">❌</span>
-                            )}
-                          </div>
-                          <div className="message-time">
-                            {msg.timestamp
-                              ? (() => {
-                                  try {
-                                    // Check if timestamp is a Firestore timestamp object
-                                    if (
-                                      msg.timestamp &&
-                                      msg.timestamp.seconds
-                                    ) {
-                                      return format(
-                                        new Date(msg.timestamp.seconds * 1000),
-                                        "HH:mm:ss",
-                                        { locale: vi }
-                                      );
-                                    }
-                                    // Handle regular Date objects or ISO strings
-                                    const date = new Date(msg.timestamp);
-                                    if (!isNaN(date.getTime())) {
-                                      return format(date, "HH:mm:ss", {
-                                        locale: vi,
-                                      });
-                                    }
-                                    return "";
-                                  } catch (error) {
-                                    console.error(
-                                      "Error formatting date:",
-                                      error
-                                    );
-                                    return "";
+                        // Format timestamp based on the Firestore timestamp format
+                        let formattedTime = "";
+                        try {
+                          if (msg.timestamp) {
+                            if (msg.timestamp.seconds) {
+                              // Handle Firestore timestamp format
+                              formattedTime = format(
+                                new Date(msg.timestamp.seconds * 1000),
+                                "HH:mm",
+                                { locale: vi }
+                              );
+                            } else if (
+                              typeof msg.timestamp === "object" &&
+                              msg.timestamp._seconds
+                            ) {
+                              // Handle serialized Firestore timestamp
+                              formattedTime = format(
+                                new Date(msg.timestamp._seconds * 1000),
+                                "HH:mm",
+                                { locale: vi }
+                              );
+                            } else if (typeof msg.timestamp === "string") {
+                              // Handle ISO string date format
+                              formattedTime = format(
+                                new Date(msg.timestamp),
+                                "HH:mm",
+                                { locale: vi }
+                              );
+                            } else if (msg.timestamp instanceof Date) {
+                              // Handle JavaScript Date object
+                              formattedTime = format(msg.timestamp, "HH:mm", {
+                                locale: vi,
+                              });
+                            } else if (
+                              typeof msg.timestamp.toDate === "function"
+                            ) {
+                              // Handle Firestore timestamp object with toDate method
+                              formattedTime = format(
+                                msg.timestamp.toDate(),
+                                "HH:mm",
+                                { locale: vi }
+                              );
+                            } else {
+                              // Fallback: try to create a date directly
+                              formattedTime = format(
+                                new Date(msg.timestamp),
+                                "HH:mm",
+                                { locale: vi }
+                              );
+                            }
+                          }
+                        } catch (error) {
+                          console.error(
+                            "Failed to format timestamp:",
+                            error,
+                            "Original timestamp:",
+                            msg.timestamp
+                          );
+                        }
+
+                        return (
+                          <div
+                            key={msg.id || `msg-${index}`}
+                            className={`message ${
+                              isCurrentUser ? "right" : "left"
+                            } ${isPending ? "pending" : ""} ${
+                              hasError ? "error" : ""
+                            }`}
+                          >
+                            {!isCurrentUser && (
+                              <div className="message-avatar">
+                                <img
+                                  src={
+                                    currentParticipant.avatarUrl ||
+                                    "/default-avatar.png"
                                   }
-                                })()
-                              : ""}
+                                  alt="avatar"
+                                  onError={(e) => {
+                                    e.target.src = "/default-avatar.png";
+                                  }}
+                                />
+                              </div>
+                            )}
+                            <div className="message-content">
+                              <div className="msg">
+                                {msg.message}
+                                {isPending && (
+                                  <span className="status-indicator">⏳</span>
+                                )}
+                                {hasError && (
+                                  <span className="status-indicator">❌</span>
+                                )}
+                              </div>
+                              {formattedTime && (
+                                <div className="message-time">
+                                  {formattedTime}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })
+                        );
+                      })}
+                    </div>
                   ) : (
                     <div className="no-messages">
                       <p>Chưa có tin nhắn nào</p>

@@ -62,81 +62,45 @@ export const fetchChats = async (token) => {
       timeout: 10000
     });
     
-    // Lọc danh sách chat ở phía client
+    // Lấy danh sách chat từ API
     const allChats = response.data;
-    let userChats = [];
+    console.log("Tất cả cuộc trò chuyện từ API:", allChats);
     
-    // Lọc chats dựa trên ID người dùng và kiểm tra xem có tin nhắn không
-    if (Array.isArray(allChats)) {
-      for (const chat of allChats) {
-        // Kiểm tra chatId chứa ID người dùng hiện tại
-        if (chat.chatId && chat.chatId.includes(currentUserId)) {
-          // Kiểm tra xem chat này có messages không
-          try {
-            const messagesResponse = await axios.get(
-              `http://localhost:8080/api/messages/${chat.chatId}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-                timeout: 5000
-              }
-            );
-            
-            const messages = messagesResponse.data;
-            // Chỉ thêm vào danh sách chat nếu có ít nhất một tin nhắn
-            if (Array.isArray(messages) && messages.length > 0) {
-              userChats.push(chat);
-            }
-          } catch (error) {
-            console.error(`Lỗi khi kiểm tra tin nhắn cho chat ${chat.chatId}:`, error);
-            // Nếu có lỗi khi kiểm tra tin nhắn, ta vẫn giữ nguyên chat này để an toàn
-          }
-        } 
-        // Hoặc kiểm tra mảng participants nếu có
-        else if (chat.participants && Array.isArray(chat.participants) && chat.participants.includes(currentUserId)) {
-          // Tương tự kiểm tra messages
-          try {
-            const messagesResponse = await axios.get(
-              `http://localhost:8080/api/messages/${chat.chatId}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-                timeout: 5000
-              }
-            );
-            
-            const messages = messagesResponse.data;
-            // Chỉ thêm vào danh sách chat nếu có ít nhất một tin nhắn
-            if (Array.isArray(messages) && messages.length > 0) {
-              userChats.push(chat);
-            }
-          } catch (error) {
-            console.error(`Lỗi khi kiểm tra tin nhắn cho chat ${chat.chatId}:`, error);
-          }
-        }
-      }
-      
-      console.log(`Đã lọc ${userChats.length}/${allChats.length} cuộc trò chuyện có tin nhắn của người dùng ${currentUserId}`);
+    if (!Array.isArray(allChats)) {
+      console.error("Dữ liệu nhận được từ API không phải là một mảng:", allChats);
+      return [];
     }
     
+    if (allChats.length === 0) {
+      console.log("API trả về danh sách trống");
+    }
+    
+    // Lọc chats dựa trên ID người dùng - giữ lại tất cả chat của người dùng
+    const userChats = allChats.filter(chat => {
+      // Kiểm tra chatId chứa ID người dùng hiện tại
+      const isChatIdMatch = chat.chatId && chat.chatId.includes(currentUserId);
+      
+      // Kiểm tra mảng participants chứa ID người dùng hiện tại
+      const isParticipantMatch = chat.participants && 
+                                Array.isArray(chat.participants) && 
+                                chat.participants.includes(currentUserId);
+      
+      return isChatIdMatch || isParticipantMatch;
+    });
+    
+    console.log(`Đã tìm thấy ${userChats.length}/${allChats.length} cuộc trò chuyện của người dùng ${currentUserId}`);
+    
+    // Trả về tất cả chat của người dùng, không lọc dựa trên tin nhắn
     return userChats;
   } catch (error) {
     // Xử lý lỗi
-    const errorMessage = error.response?.data;
-    console.error("Lỗi khi lấy danh sách chat:", { 
-      status: error.response?.status,
-      message: errorMessage
-    });
+    console.error("Lỗi khi lấy danh sách chat:", error);
     
-    // Kiểm tra lỗi Firebase
-    if (error.response?.status === 500 && typeof errorMessage === 'string') {
-      if (errorMessage.indexOf("Firestore") >= 0 || 
-          errorMessage.indexOf("Credentials") >= 0 ||
-          errorMessage.indexOf("UNAVAILABLE") >= 0) {
-        console.error("Phát hiện lỗi xác thực Firebase");
-      }
+    if (error.response) {
+      console.error("Chi tiết lỗi:", { 
+        status: error.response.status,
+        data: error.response.data
+      });
     }
     
     return [];
@@ -154,15 +118,53 @@ export const fetchAllUsers = async (token) => {
 
 // Lấy tin nhắn theo chatId
 export const fetchMessages = async (chatId, token) => {
-  const response = await axios.get(
-    `http://localhost:8080/api/messages/${chatId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+  try {
+    console.log(`Đang gọi API để lấy tin nhắn cho chat: ${chatId}`);
+    
+    if (!chatId) {
+      console.error("fetchMessages được gọi mà không có chatId");
+      return [];
     }
-  );
-  return response.data;
+    
+    if (!token) {
+      console.error("fetchMessages được gọi mà không có token");
+      return [];
+    }
+    
+    const response = await axios.get(
+      `http://localhost:8080/api/messages/${chatId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000 // 10 giây timeout
+      }
+    );
+    
+    // Kiểm tra dữ liệu trả về
+    const messages = response.data;
+    console.log(`Nhận được ${Array.isArray(messages) ? messages.length : 0} tin nhắn cho chat ${chatId}`);
+    
+    if (Array.isArray(messages)) {
+      // Kiểm tra và log một số tin nhắn đầu tiên để debug
+      if (messages.length > 0) {
+        console.log("Mẫu tin nhắn đầu tiên:", messages[0]);
+      }
+      return messages;
+    } else {
+      console.error("API trả về dữ liệu không phải là mảng:", messages);
+      return [];
+    }
+  } catch (error) {
+    console.error(`Lỗi khi lấy tin nhắn cho chat ${chatId}:`, error);
+    if (error.response) {
+      console.error("Chi tiết phản hồi lỗi:", {
+        status: error.response.status,
+        data: error.response.data
+      });
+    }
+    return [];
+  }
 };
 
 // Gửi tin nhắn

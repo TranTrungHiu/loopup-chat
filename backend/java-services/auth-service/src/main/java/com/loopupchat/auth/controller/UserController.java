@@ -90,7 +90,7 @@ public class UserController {
         }
     }
 
-    @GetMapping("/search")
+    @GetMapping("/find")
     public ResponseEntity<?> searchUserByEmail(@RequestParam String email) {
         try {
             // Tìm người dùng qua email trong Firestore

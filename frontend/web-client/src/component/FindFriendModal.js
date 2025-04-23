@@ -95,7 +95,7 @@ const FindFriendModal = ({ isOpen, onClose, uid, token }) => {
       setFoundUser(user);
 
       const checkRes = await fetch(
-        `http://localhost:8080/api/friends/status/${uid}/${user.id}`,
+        `http://localhost:8080/api/friends/status?user1=${uid}&user2=${user.id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -125,8 +125,8 @@ const FindFriendModal = ({ isOpen, onClose, uid, token }) => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          userId1: uid,
-          userId2: foundUser.id,
+          fromUserId: uid,
+          toUserId: foundUser.id,
         }),
       });
 
