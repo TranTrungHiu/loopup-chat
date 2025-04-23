@@ -193,7 +193,7 @@ const FindFriendModal = ({ isOpen, onClose, uid, token }) => {
       </DialogTitle>
       
       <DialogContent sx={{ py: 3 }}>
-        <Box sx={{ mb: 3 }}>
+        <Box sx={{ mb: 3, mt: 3 }}>
           <TextField
             fullWidth
             label="Email người dùng"

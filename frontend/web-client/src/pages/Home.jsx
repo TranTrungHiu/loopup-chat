@@ -38,9 +38,12 @@ import {
   FaUserPlus,
   FaUsers,
   FaSync,
+  FaSyncAlt,
   FaComments,
   FaUserFriends,
   FaSearch,
+  FaPencilAlt,
+  Fa
 } from "react-icons/fa";
 import { BsSendFill } from "react-icons/bs";
 import { BiSearch } from "react-icons/bi";
@@ -149,6 +152,7 @@ const Home = () => {
     }
   }, [isAccountModalOpen, uid, token]);
 
+  console.log(userInfo);
   const loadChats = useCallback(async () => {
     setIsLoadingChats(true);
     setChatError(null);
@@ -550,17 +554,25 @@ const Home = () => {
       <div className="sidebar">
         <div className="logo">LOOPUP</div>
         <div className="sidebar-icons">
+
           <div
             className={`icon ${tabs === "Chat" ? "active" : ""}`}
             title="Chat"
-            onClick={() => setTabs("Chat")}
+            onClick={() =>{ setTabs("Chat");
+            setShowFriendSidebar(false); // Đóng sidebar bạn bè khi chuyển sang tab chat
+            }}
           >
             <FaComments size={18} /> <span>Chat</span>
           </div>
+
           <div
             className={`icon ${tabs === "Friend" ? "active" : ""}`}
             title="Bạn bè"
-            onClick={() => setTabs("Friend")}
+                 onClick={() => {
+            setShowFriendSidebar(!showFriendSidebar);
+            setShowSettings(false);
+            setTabs("Friend");
+          }}
           >
             <FaUserFriends size={18} /> <span>Bạn bè</span>
           </div>
@@ -603,16 +615,6 @@ const Home = () => {
               >
                 <FaUser size={16} /> Tài khoản
               </button>
-              <button
-                className="settings-item"
-                onClick={() => {
-                  setShowFriendSidebar(!showFriendSidebar);
-                  setShowSettings(false);
-                  setTabs("Friend");
-                }}
-              >
-                <FaUserFriends size={16} /> Bạn bè
-              </button>
               <button className="settings-item logout" onClick={handleLogout}>
                 <FaSignOutAlt size={16} /> Đăng xuất
               </button>
@@ -630,7 +632,7 @@ const Home = () => {
       <div
         className={`main-content ${
           showFriendSidebar ? "with-friend-sidebar" : ""
-        }`}
+        } ${tabs === "Invite" ? "no-flex" : ""}`}
       >
         {tabs === "" && (
           <div className={"welcome"}>
@@ -648,7 +650,7 @@ const Home = () => {
                 onClick={loadChats}
                 disabled={isLoadingChats}
               >
-                {isLoadingChats ? "⏳" : "🔄"}
+                {isLoadingChats ? "⏳" : <FaSyncAlt  size={20} />}
               </button>
             </h3>
             <div className="search-box">
@@ -821,6 +823,7 @@ const Home = () => {
           </div>
         )}
       </div>
+      {tabs === "Invite" && <InviteTab uid={uid} token={token} />}
       <Modal
         isOpen={isUserModalOpen}
         onRequestClose={() => setIsUserModalOpen(false)}
@@ -885,6 +888,16 @@ const Home = () => {
         className="account-modal"
         overlayClassName="overlay"
       >
+        <div className="account-header">
+          <h2>Thông tin người dùng</h2>
+          <button
+            className="close-btn"
+            onClick={() => setIsAccountModalOpen(false)}
+          >
+            X
+          </button>
+        </div>
+        
         {userInfo ? (
           <div className="account-info">
             <div className="cover-photo">
@@ -918,7 +931,7 @@ const Home = () => {
                 Chỉ bạn bè có lưu số của bạn trong danh bạ máy xem được số này
               </p>
             </div>
-            <button className="update-btn">🔄 Cập nhật</button>
+            <button className="update-btn"><FaPencilAlt size={20}/> Cập nhật</button>
           </div>
         ) : (
           <div className="loading-info">
@@ -993,8 +1006,8 @@ const Home = () => {
         token={token}
       />
       {currentParticipant && tabs==="Chat" && <InformationChat user={currentParticipant} />}
-      {tabs === "Friend" && <FriendTab uid={uid} token={token} />}
-      {tabs === "Invite" && <InviteTab uid={uid} token={token} />}
+      {/* {tabs === "Friend" && <FriendTab uid={uid} token={token} />} */}
+      
     </div>
   );
 };

@@ -30,10 +30,11 @@
     display: none;
 }
 .logo {
-    font-size: 18px;
+    font-size: 30px;
     font-weight: bold;
     text-align: center;
     color: #fff;
+    margin-bottom: 20px;
 }
 
 .sidebar-icons {
@@ -65,10 +66,14 @@
     border-right: 1px solid #ddd;
     overflow-y: auto;
     height: 100vh;
+    text-align: center;
 }
 .chat-title {
-    font-size: 16px;
+    font-size: 25px;
     margin-bottom: 10px;
+    justify-content: space-around;
+    display: flex;
+    align-items: center;
 }
 .search-box {
     display: flex;
@@ -85,7 +90,12 @@
 .search-box input {
     border: none;
     outline: none;
-    width: 100%;
+    width: 80%;
+    background: #d2e3fc;
+    font-size: medium;
+    height: fit-content;
+    border-radius: 8px;
+    height: 35px;
 }
 .icon-button {
     background: transparent;
@@ -419,7 +429,7 @@
     flex-direction: column;
     position: absolute;
     bottom: 65px;
-    left: 50%;
+    left: 120%;
     transform: translateX(-50%);
     background: white;
     color: black;
@@ -430,6 +440,7 @@
     z-index: 1000;
     animation: slideUp 0.3s ease-out forwards;
     border: 1px solid rgba(0, 0, 0, 0.05);
+    margin-left: 20px;
 }
 @keyframes slideUp {
     from {
@@ -531,6 +542,24 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+.account-header{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.close-btn {
+    background: white;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: black;
+    transition: all 0.2s;
+}
+.close-btn:hover {
+    color: #e74c3c;
+    transform: scale(1.1);
+}
 .account-info {
     padding: 0 0 20px 0;
 }
@@ -799,8 +828,7 @@
     justify-content: center;
     background-color: #f5f5f5;
     border: none;
-    border-radius: 50%;
-    width: 40px;
+    width: 45px;
     height: 40px;
     margin-left: 8px;
     padding: 0;

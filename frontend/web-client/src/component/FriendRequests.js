@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "../pages/styles/FriendRequests.css"; // Đường dẫn đến file CSS của bạn
-
+import {FaSyncAlt } from "react-icons/fa";
 const FriendRequests = ({ uid, token }) => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -111,7 +111,7 @@ const FriendRequests = ({ uid, token }) => {
       <h2>Lời mời kết bạn</h2>
       
       <button className="refresh-requests" onClick={fetchRequests} disabled={loading}>
-        {loading ? "⏳" : "🔄 Làm mới"}
+        {loading ? "⏳" :  <FaSyncAlt làm mới/>}
       </button>
       
       {loading ? (

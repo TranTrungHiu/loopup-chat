@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "../pages/styles/FriendList.css"; // Đường dẫn đến file CSS của bạn
-import { FaSearch } from "react-icons/fa";
-
+import { FaSearch,FaSyncAlt  } from "react-icons/fa";
 const FriendList = ({ uid, token, onStartChat }) => {
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -71,10 +70,10 @@ const FriendList = ({ uid, token, onStartChat }) => {
 
   return (
     <div className="friend-sidebar">
-      <div className="friend-sidebar-header">
-        <h3>Danh sách bạn bè</h3>
+      <div className="friend-sidebar-header">        
+        <h2>Danh sách bạn bè</h2>
         <button className="refresh-button" onClick={fetchFriends} disabled={loading}>
-          {loading ? "⏳" : "🔄"}
+          {loading ? "⏳" : <FaSyncAlt   />}
         </button>
       </div>
       
@@ -130,7 +129,6 @@ const FriendList = ({ uid, token, onStartChat }) => {
       ) : (
         <div className="no-friends-sidebar">
           <p>Chưa có bạn bè nào</p>
-          <p className="find-friends-note">Tìm bạn bè trong tab Bạn bè</p>
         </div>
       )}
     </div>
