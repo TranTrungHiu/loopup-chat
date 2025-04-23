@@ -4,12 +4,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.CollectionReference;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.QuerySnapshot;
 import com.google.firebase.cloud.FirestoreClient;
 
 import java.util.*;
@@ -47,26 +49,46 @@ public class ChatController {
         }
     }
 
-    @GetMapping
-    public ResponseEntity<?> getAllChats() {
+    @GetMapping("")
+    public ResponseEntity<?> getAllChats(@RequestParam(required = false) String userId) {
         Firestore firestore = FirestoreSingleton.getFirestore();
         CollectionReference chatsRef = firestore.collection("chats");
 
         try {
-            // Truy vấn tất cả các cuộc trò chuyện
-            List<QueryDocumentSnapshot> documents = chatsRef.get().get().getDocuments();
+            // Nếu có userId, lọc chat chỉ thuộc về người dùng đó
+            if (userId != null && !userId.isEmpty()) {
+                // Thực hiện query Firestore để lấy chat có chứa userId trong participants
+                Query query = chatsRef.whereArrayContains("participants", userId);
+                ApiFuture<QuerySnapshot> future = query.get();
+                List<QueryDocumentSnapshot> documents = future.get().getDocuments();
 
-            // Chuyển đổi kết quả thành danh sách các cuộc trò chuyện
-            List<Map<String, Object>> chats = new ArrayList<>();
-            for (QueryDocumentSnapshot doc : documents) {
-                chats.add(doc.getData());
+                List<Object> chatList = new ArrayList<>();
+                for (QueryDocumentSnapshot doc : documents) {
+                    // Lưu ID của document vào dữ liệu trả về
+                    Map<String, Object> chatData = new HashMap<>(doc.getData());
+                    chatData.put("chatId", doc.getId());
+                    chatList.add(chatData);
+                }
+
+                return ResponseEntity.ok(chatList);
+            } else {
+                // Nếu không có userId, trả về tất cả chat (có thể giới hạn số lượng)
+                ApiFuture<QuerySnapshot> future = chatsRef.limit(100).get();
+                List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+
+                List<Object> chatList = new ArrayList<>();
+                for (QueryDocumentSnapshot doc : documents) {
+                    Map<String, Object> chatData = new HashMap<>(doc.getData());
+                    chatData.put("chatId", doc.getId());
+                    chatList.add(chatData);
+                }
+
+                return ResponseEntity.ok(chatList);
             }
-
-            return ResponseEntity.ok(chats);
         } catch (Exception e) {
-            e.printStackTrace(); // Log lỗi chi tiết
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Lỗi khi lấy danh sách cuộc trò chuyện: " + e.getMessage()));
+                    .body(Map.of("message", "Lỗi khi lấy danh sách chat: " + e.getMessage()));
         }
     }
 

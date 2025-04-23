@@ -5,6 +5,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.google.api.core.ApiFuture;
+import com.google.cloud.firestore.CollectionReference;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.Query;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.QuerySnapshot;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseToken;
+import com.google.firebase.cloud.FirestoreClient;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,17 +25,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.CollectionReference;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.DocumentSnapshot;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.QueryDocumentSnapshot;
-import com.google.cloud.firestore.QuerySnapshot;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseToken;
-import com.google.firebase.cloud.FirestoreClient;
 
 @RestController
 @RequestMapping("/api/user")
@@ -74,7 +75,7 @@ public class UserController {
     public ResponseEntity<?> getAllUsers() {
         try {
             System.out.println("Received request for all users"); // Log kiểm tra
-            CollectionReference usersRef = FirestoreSingleton.getFirestore().collection("users");
+            CollectionReference usersRef = firestore.collection("users");
 
             List<Map<String, Object>> users = new ArrayList<>();
             for (DocumentSnapshot doc : usersRef.get().get().getDocuments()) {
@@ -90,42 +91,37 @@ public class UserController {
     }
 
     @GetMapping("/find")
-    public ResponseEntity<?> findUserByEmail(@RequestParam String email) {
+    public ResponseEntity<?> searchUserByEmail(@RequestParam String email) {
         try {
-            // Truy vấn Firestore
-            ApiFuture<QuerySnapshot> future = firestore.collection("users")
-                    .whereEqualTo("email", email)
-                    .get();
+            // Tìm người dùng qua email trong Firestore
+            CollectionReference usersRef = firestore.collection("users");
+            Query query = usersRef.whereEqualTo("email", email);
+            ApiFuture<QuerySnapshot> querySnapshot = query.get();
+            List<QueryDocumentSnapshot> documents = querySnapshot.get().getDocuments();
 
-            // Lấy danh sách tài liệu
-            List<QueryDocumentSnapshot> documents = future.get().getDocuments(); // Sử dụng getDocuments()
             if (documents.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy người dùng");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("message", "Không tìm thấy người dùng với email này"));
             }
 
-            // Lấy tài liệu đầu tiên
+            // Lấy thông tin người dùng đầu tiên tìm thấy
             DocumentSnapshot userDoc = documents.get(0);
-            if (userDoc == null || userDoc.getData() == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy dữ liệu người dùng");
-            }
-
-            // Chuẩn bị dữ liệu trả về
             Map<String, Object> userData = userDoc.getData();
-            userData.put("id", userDoc.getId()); // Thêm ID người dùng
+
+            // Thêm ID vào dữ liệu
+            userData.put("id", userDoc.getId());
 
             return ResponseEntity.ok(userData);
-
         } catch (Exception e) {
-            e.printStackTrace(); // Log chi tiết lỗi
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Lỗi khi tìm người dùng: " + e.getMessage());
+                    .body(Map.of("message", "Lỗi khi tìm kiếm người dùng: " + e.getMessage()));
         }
     }
 
     @GetMapping("/{uid}")
     public ResponseEntity<?> getUserByUid(@PathVariable String uid) {
         try {
-            Firestore firestore = FirestoreClient.getFirestore();
             DocumentReference userRef = firestore.collection("users").document(uid);
             DocumentSnapshot snapshot = userRef.get().get();
 

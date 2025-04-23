@@ -1,5 +1,6 @@
 package com.loopupchat.auth.controller;
 
+import com.corundumstudio.socketio.SocketIOServer;
 import com.google.cloud.firestore.CollectionReference;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
@@ -17,10 +18,18 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/messages")
 public class MessageController {
+
+    private final SocketIOServer socketIOServer;
+
+    // Tiêm SocketIOServer thông qua constructor
+    public MessageController(SocketIOServer socketIOServer) {
+        this.socketIOServer = socketIOServer;
+    }
 
     @PostMapping
     public ResponseEntity<?> sendMessage(@RequestBody Map<String, String> request) {
@@ -54,15 +63,41 @@ public class MessageController {
                 chatRef.update("lastMessage", message, "lastUpdated", new Date());
             }
 
-            // Lưu tin nhắn vào collection "messages"
+            // Generate unique message ID
+            String messageId = UUID.randomUUID().toString();
+            Date timestamp = new Date();
+
+            // Lưu tin nhắn vào collection "messages" với ID xác định
             Map<String, Object> messageData = new HashMap<>();
+            messageData.put("id", messageId);
             messageData.put("chatId", chatId);
             messageData.put("sender", sender);
             messageData.put("message", message);
-            messageData.put("timestamp", new Date());
-            messagesRef.add(messageData);
+            messageData.put("timestamp", timestamp);
+            messageData.put("status", "sent");
 
-            return ResponseEntity.ok(Map.of("status", "success"));
+            // Lưu tin nhắn với ID được tạo
+            messagesRef.document(messageId).set(messageData);
+
+            // Thêm thông tin người đã đọc tin nhắn
+            Map<String, Object> readReceipt = new HashMap<>();
+            readReceipt.put(sender, timestamp);
+            messageData.put("readBy", readReceipt);
+
+            // Phát tin nhắn qua Socket.IO đến phòng chat tương ứng
+            socketIOServer.getRoomOperations(chatId).sendEvent("new_message", messageData);
+
+            // Thông báo cập nhật danh sách chat cho tất cả người tham gia
+            String[] participants = chatId.split("_");
+            for (String participant : participants) {
+                socketIOServer.getRoomOperations("user_" + participant).sendEvent("chat_updated",
+                        Map.of(
+                                "chatId", chatId,
+                                "lastMessage", message,
+                                "lastUpdated", timestamp));
+            }
+
+            return ResponseEntity.ok(messageData);
         } catch (Exception e) {
             e.printStackTrace(); // Log lỗi chi tiết
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -73,7 +108,6 @@ public class MessageController {
     @GetMapping("/{chatId}")
     public ResponseEntity<?> getMessages(@PathVariable String chatId) {
         Firestore firestore = FirestoreClient.getFirestore();
-        CollectionReference messagesRef = firestore.collection("messages");
 
         try {
             if (chatId == null || chatId.isEmpty()) {
@@ -81,21 +115,110 @@ public class MessageController {
                         .body(Map.of("message", "chatId không được để trống"));
             }
 
-            // Truy vấn tin nhắn theo chatId và sắp xếp theo thời gian
-            Query query = messagesRef.whereEqualTo("chatId", chatId).orderBy("timestamp", Query.Direction.ASCENDING);
-            List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
+            System.out.println("Đang lấy tin nhắn cho chat: " + chatId);
 
-            // Chuyển đổi kết quả thành danh sách tin nhắn
-            List<Map<String, Object>> messages = new ArrayList<>();
-            for (QueryDocumentSnapshot doc : documents) {
-                messages.add(doc.getData());
+            // Để đảm bảo an toàn, trả về danh sách trống nếu chatId không đúng định dạng
+            if (chatId.contains("/") || chatId.contains("\\")) {
+                System.out.println("Phát hiện ký tự không hợp lệ trong chatId: " + chatId);
+                return ResponseEntity.ok(new ArrayList<>());
             }
 
-            return ResponseEntity.ok(messages);
+            CollectionReference messagesRef = firestore.collection("messages");
+
+            // Truy vấn tin nhắn theo chatId và sắp xếp theo thời gian
+            Query query = messagesRef.whereEqualTo("chatId", chatId).orderBy("timestamp", Query.Direction.ASCENDING);
+
+            try {
+                List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
+                System.out.println("Số tin nhắn tìm được: " + documents.size());
+
+                // Chuyển đổi kết quả thành danh sách tin nhắn
+                List<Map<String, Object>> messages = new ArrayList<>();
+                for (QueryDocumentSnapshot doc : documents) {
+                    try {
+                        Map<String, Object> msgData = doc.getData();
+
+                        // Đảm bảo có id nếu không có trong dữ liệu
+                        if (!msgData.containsKey("id")) {
+                            msgData.put("id", doc.getId());
+                        }
+
+                        messages.add(msgData);
+                    } catch (Exception docEx) {
+                        System.err.println("Lỗi xử lý tài liệu: " + doc.getId() + ", lỗi: " + docEx.getMessage());
+                    }
+                }
+
+                System.out.println("Đã xử lý thành công " + messages.size() + " tin nhắn");
+                return ResponseEntity.ok(messages);
+            } catch (Exception e) {
+                System.err.println("Lỗi khi truy vấn dữ liệu cho chatId: " + chatId);
+                e.printStackTrace();
+
+                // Kiểm tra nếu lỗi là do chat không tồn tại
+                try {
+                    DocumentReference chatRef = firestore.collection("chats").document(chatId);
+                    DocumentSnapshot chatSnapshot = chatRef.get().get();
+
+                    if (!chatSnapshot.exists()) {
+                        System.out.println("Chat không tồn tại: " + chatId);
+                    }
+                } catch (Exception chatEx) {
+                    System.err.println("Lỗi khi kiểm tra tồn tại chat: " + chatEx.getMessage());
+                }
+
+                // Trả về danh sách rỗng thay vì lỗi 500 để giao diện người dùng không bị gián
+                // đoạn
+                return ResponseEntity.ok(new ArrayList<>());
+            }
         } catch (Exception e) {
-            e.printStackTrace(); // Log lỗi chi tiết
+            System.err.println("Lỗi tổng thể khi xử lý yêu cầu tin nhắn cho chatId: " + chatId);
+            e.printStackTrace();
+            return ResponseEntity.ok(new ArrayList<>()); // Trả về danh sách rỗng thay vì lỗi 500
+        }
+    }
+
+    @PostMapping("/{messageId}/read")
+    public ResponseEntity<?> markMessageAsRead(
+            @PathVariable String messageId,
+            @RequestBody Map<String, String> request) {
+
+        String userId = request.get("userId");
+        if (userId == null || userId.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "userId không được để trống"));
+        }
+
+        Firestore firestore = FirestoreClient.getFirestore();
+        DocumentReference messageRef = firestore.collection("messages").document(messageId);
+
+        try {
+            DocumentSnapshot messageDoc = messageRef.get().get();
+            if (!messageDoc.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Lấy thông tin tin nhắn
+            Map<String, Object> messageData = messageDoc.getData();
+            String chatId = (String) messageData.get("chatId");
+
+            // Cập nhật người đọc tin nhắn
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("readBy." + userId, new Date());
+            messageRef.update(updates);
+
+            // Thông báo cập nhật trạng thái đọc tin nhắn cho phòng chat
+            Map<String, Object> readNotification = new HashMap<>();
+            readNotification.put("messageId", messageId);
+            readNotification.put("userId", userId);
+            readNotification.put("timestamp", new Date());
+
+            socketIOServer.getRoomOperations(chatId).sendEvent("message_read", readNotification);
+
+            return ResponseEntity.ok(Map.of("status", "success"));
+        } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Lỗi khi lấy tin nhắn: " + e.getMessage()));
+                    .body(Map.of("message", "Lỗi khi đánh dấu tin nhắn đã đọc: " + e.getMessage()));
         }
     }
 }
