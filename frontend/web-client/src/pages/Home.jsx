@@ -38,6 +38,8 @@ import {
   FaUserPlus,
   FaUsers,
   FaSync,
+  FaVideo,
+  FaInfoCircle,
   FaSyncAlt,
   FaComments,
   FaUserFriends,
@@ -68,12 +70,13 @@ import {
 } from "../services/chatService";
 import ChatList from "../component/ChatList";
 // For timestamp formatting
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow, format, set } from "date-fns";
 import { vi } from "date-fns/locale";
 
 Modal.setAppElement("#root"); // Đảm bảo modal hoạt động đúng
 
 const Home = () => {
+  const [chatInfor, setChatInfor] = useState(false);
   const [friendList, setFriendList] = useState([]);
   const [showFriends, setShowFriends] = useState(false);
   const uid = localStorage.getItem("uid");
@@ -627,6 +630,7 @@ const Home = () => {
           uid={uid}
           token={token}
           onStartChat={handleStartChatFromSidebar}
+          onClose={() => setShowFriendSidebar(false)}
         />
       )}
       <div
@@ -691,23 +695,41 @@ const Home = () => {
               <>
                 <div className="chat-header">
                   <div className="chat-user">
-                    <div className="chat-user-avatar">
-                      <img
-                        src={
-                          currentParticipant.avatarUrl || "/default-avatar.png"
-                        }
-                        alt="avatar"
-                        onError={(e) => {
-                          e.target.src = "/default-avatar.png";
-                        }}
-                      />
-                    </div>
                     <div>
-                      <p className="chat-user-name">
-                        {currentParticipant.firstName}{" "}
-                        {currentParticipant.lastName}
-                      </p>
-                      <p className="chat-status">Đang hoạt động</p>
+                      <div className="chat-user-avatar">
+                        <img
+                          src={currentParticipant.avatarUrl || "/default-avatar.png"}
+                          alt="avatar"
+                          onError={(e) => {
+                            e.target.src = "/default-avatar.png";
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <p className="chat-user-name">
+                          {currentParticipant.firstName} {currentParticipant.lastName}
+                        </p>
+                        <p className="chat-status">Đang hoạt động</p>
+                      </div>
+                    </div>
+                    <div className="chat-actions">
+                      {/* Nút Call Video */}
+                      <button
+                        className="icon-button"
+                        title="Gọi video"
+                        onClick={() => alert("Gọi video")}
+                      >
+                        <FaVideo size={20} />
+                      </button>
+
+                      {/* Nút đóng/mở InformationChat */}
+                      <button
+                        className="icon-button"
+                        title="Thông tin người dùng"
+                        onClick={() => setChatInfor(!chatInfor)}
+                      >
+                        <FaInfoCircle size={20} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -979,6 +1001,7 @@ const Home = () => {
                   onClick={() => {
                     handleStartChat(friend);
                     setShowFriends(false);
+                    
                   }}
                 >
                   Nhắn tin
@@ -1006,7 +1029,7 @@ const Home = () => {
         uid={uid}
         token={token}
       />
-      {currentParticipant && tabs==="Chat" && <InformationChat user={currentParticipant} />}
+      {currentParticipant && tabs==="Chat" && chatInfor == true && <InformationChat user={currentParticipant} />}
       {/* {tabs === "Friend" && <FriendTab uid={uid} token={token} />} */}
       
     </div>
