@@ -14,7 +14,7 @@ const GroupManagement = ({ onBack, isAdmin }) => {
                 <h3>Quản lý nhóm</h3>
             </div>
 
-            <div className="group-section">
+            <div className="group-section" disabled={!isAdmin}>
                 <label>
                     <input type="checkbox" disabled={!isAdmin} defaultChecked />
                     Thay đổi tên & ảnh đại diện của nhóm

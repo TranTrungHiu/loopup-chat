@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import "./styles/Home.css";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { ToastContainer } from "react-toastify";
 import {
   Button,
   IconButton,
@@ -100,6 +103,7 @@ const Home = () => {
   const [showFriendSidebar, setShowFriendSidebar] = useState(false);
   const [isFindFriendModalOpen, setIsFindFriendModalOpen] = useState(false);
   const navigate = useNavigate();
+
 
   // Video call states
   const [isVideoCall, setIsVideoCall] = useState(false);

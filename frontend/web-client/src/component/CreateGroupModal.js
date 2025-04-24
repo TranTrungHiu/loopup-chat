@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import "../pages/styles/CreateGroupModal.css";
-
 const CreateGroupModal = ({ onClose, userId }) => {
     const [groupName, setGroupName] = useState("");
     const [selectedUsers, setSelectedUsers] = useState([]);
@@ -129,12 +128,33 @@ const CreateGroupModal = ({ onClose, userId }) => {
                         className="create-btn"
                         disabled={selectedUsers.length < 2 || groupName.trim() === ""}
                         onClick={async () => {
-                            console.log("Tạo nhóm với tên:", groupName, "và thành viên:", selectedUsers);
-                            setTimeout(() => {
-                                onClose();
-                            }, 4000);
-
+                            try {
+                                const response = await fetch("http://localhost:8080/api/chats/group", {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                        creatorId: userId,
+                                        groupName: groupName,
+                                        memberIds: selectedUsers.map(user => user.id),
+                                    }),
+                                });
+                        
+                                const data = await response.json();
+                        
+                                if (response.ok) {
+                                    alert("Nhóm đã được tạo thành công!");
+                                    onClose();
+                                } else {
+                                    alert("❌ Lỗi khi tạo nhóm: " + (data.message || "Không rõ nguyên nhân"));
+                                }
+                            } catch (error) {
+                                console.error("Lỗi khi gọi API tạo nhóm:", error);
+                                alert("❌ Có lỗi xảy ra khi tạo nhóm!");
+                            }
                         }}
+                        
                     >
                         Tạo nhóm
                     </button>
