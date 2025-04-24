@@ -74,7 +74,7 @@ const FindFriendModal = ({ isOpen, onClose, uid, token }) => {
       setSearchPerformed(true);
       
       const res = await fetch(
-        `http://localhost:8080/api/user/search?email=${searchEmail}`,
+        `http://localhost:8080/api/user/find?email=${searchEmail}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -95,7 +95,7 @@ const FindFriendModal = ({ isOpen, onClose, uid, token }) => {
       setFoundUser(user);
 
       const checkRes = await fetch(
-        `http://localhost:8080/api/friends/status/${uid}/${user.id}`,
+        `http://localhost:8080/api/friends/status?user1=${uid}&user2=${user.id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -125,8 +125,8 @@ const FindFriendModal = ({ isOpen, onClose, uid, token }) => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          userId1: uid,
-          userId2: foundUser.id,
+          fromUserId: uid,
+          toUserId: foundUser.id,
         }),
       });
 
@@ -193,7 +193,7 @@ const FindFriendModal = ({ isOpen, onClose, uid, token }) => {
       </DialogTitle>
       
       <DialogContent sx={{ py: 3 }}>
-        <Box sx={{ mb: 3, mt: 3 }}>
+        <Box sx={{ mb: 3 }}>
           <TextField
             fullWidth
             label="Email người dùng"

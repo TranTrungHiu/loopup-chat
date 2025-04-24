@@ -108,7 +108,6 @@ public class MessageController {
     @GetMapping("/{chatId}")
     public ResponseEntity<?> getMessages(@PathVariable String chatId) {
         Firestore firestore = FirestoreClient.getFirestore();
-        CollectionReference messagesRef = firestore.collection("messages");
 
         try {
             if (chatId == null || chatId.isEmpty()) {
@@ -116,21 +115,66 @@ public class MessageController {
                         .body(Map.of("message", "chatId không được để trống"));
             }
 
-            // Truy vấn tin nhắn theo chatId và sắp xếp theo thời gian
-            Query query = messagesRef.whereEqualTo("chatId", chatId).orderBy("timestamp", Query.Direction.ASCENDING);
-            List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
+            System.out.println("Đang lấy tin nhắn cho chat: " + chatId);
 
-            // Chuyển đổi kết quả thành danh sách tin nhắn
-            List<Map<String, Object>> messages = new ArrayList<>();
-            for (QueryDocumentSnapshot doc : documents) {
-                messages.add(doc.getData());
+            // Để đảm bảo an toàn, trả về danh sách trống nếu chatId không đúng định dạng
+            if (chatId.contains("/") || chatId.contains("\\")) {
+                System.out.println("Phát hiện ký tự không hợp lệ trong chatId: " + chatId);
+                return ResponseEntity.ok(new ArrayList<>());
             }
 
-            return ResponseEntity.ok(messages);
+            CollectionReference messagesRef = firestore.collection("messages");
+
+            // Truy vấn tin nhắn theo chatId và sắp xếp theo thời gian
+            Query query = messagesRef.whereEqualTo("chatId", chatId).orderBy("timestamp", Query.Direction.ASCENDING);
+
+            try {
+                List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
+                System.out.println("Số tin nhắn tìm được: " + documents.size());
+
+                // Chuyển đổi kết quả thành danh sách tin nhắn
+                List<Map<String, Object>> messages = new ArrayList<>();
+                for (QueryDocumentSnapshot doc : documents) {
+                    try {
+                        Map<String, Object> msgData = doc.getData();
+
+                        // Đảm bảo có id nếu không có trong dữ liệu
+                        if (!msgData.containsKey("id")) {
+                            msgData.put("id", doc.getId());
+                        }
+
+                        messages.add(msgData);
+                    } catch (Exception docEx) {
+                        System.err.println("Lỗi xử lý tài liệu: " + doc.getId() + ", lỗi: " + docEx.getMessage());
+                    }
+                }
+
+                System.out.println("Đã xử lý thành công " + messages.size() + " tin nhắn");
+                return ResponseEntity.ok(messages);
+            } catch (Exception e) {
+                System.err.println("Lỗi khi truy vấn dữ liệu cho chatId: " + chatId);
+                e.printStackTrace();
+
+                // Kiểm tra nếu lỗi là do chat không tồn tại
+                try {
+                    DocumentReference chatRef = firestore.collection("chats").document(chatId);
+                    DocumentSnapshot chatSnapshot = chatRef.get().get();
+
+                    if (!chatSnapshot.exists()) {
+                        System.out.println("Chat không tồn tại: " + chatId);
+                    }
+                } catch (Exception chatEx) {
+                    System.err.println("Lỗi khi kiểm tra tồn tại chat: " + chatEx.getMessage());
+                }
+
+                // Trả về danh sách rỗng thay vì lỗi 500 để giao diện người dùng không bị gián
+                // đoạn
+                return ResponseEntity.ok(new ArrayList<>());
+            }
         } catch (Exception e) {
-            e.printStackTrace(); // Log lỗi chi tiết
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Lỗi khi lấy tin nhắn: " + e.getMessage()));
+            System.err.println("Lỗi tổng thể khi xử lý yêu cầu tin nhắn cho chatId: " + chatId);
+            e.printStackTrace();
+            return ResponseEntity.ok(new ArrayList<>()); // Trả về danh sách rỗng thay vì lỗi 500
         }
     }
 

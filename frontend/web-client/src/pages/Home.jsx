@@ -997,7 +997,8 @@ const Home = () => {
         className="modal create-group-modal"
         overlayClassName="overlay"
       >
-        <CreateGroupModal onClose={() => setIsGroupModalOpen(false)} />
+        <CreateGroupModal onClose={() => setIsGroupModalOpen(false)}
+        userId={uid} />
       </Modal>
       <FindFriendModal
         isOpen={isFindFriendModalOpen}

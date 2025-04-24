@@ -91,7 +91,7 @@ public class UserController {
         }
     }
 
-    @GetMapping("/search")
+    @GetMapping("/find")
     public ResponseEntity<?> searchUserByEmail(@RequestParam String email) {
         try {
             CollectionReference usersRef = firestore.collection("users");
@@ -117,7 +117,6 @@ public class UserController {
                     .body(Map.of("message", "Lỗi khi tìm kiếm người dùng: " + e.getMessage()));
         }
     }
-
 
     @GetMapping("/{uid}")
     public ResponseEntity<?> getUserByUid(@PathVariable String uid) {

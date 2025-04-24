@@ -1,20 +1,38 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import "../pages/styles/CreateGroupModal.css";
 
-const usersMock = [
-    { id: 1, name: "Nguyễn Xuân Kỳ", avatar: "https://chatloopup.s3.amazonaws.com/avatars/avatar-1YSztG4i5XeNtUPbiA03u6pi9Jl1-1745220209228.jpeg" },
-    { id: 2, name: "Trung Hiếu", avatar: "https://chatloopup.s3.amazonaws.com/avatars/avatar-1YSztG4i5XeNtUPbiA03u6pi9Jl1-1745220209228.jpeg" },
-    { id: 3, name: "Nguyễn Thị Tường Vi", avatar: "https://chatloopup.s3.amazonaws.com/avatars/avatar-1YSztG4i5XeNtUPbiA03u6pi9Jl1-1745220209228.jpeg" },
-    { id: 6, name: "Trường", avatar: "/avatar4.jpg" },
-    { id: 7, name: "Long", avatar: "/avatar5.jpg" },
-    { id: 8, name: "Hạnh", avatar: "/avatar5.jpg" },
-    { id: 9, name: "Hùng", avatar: "/avatar5.jpg" }
-];
-
-const CreateGroupModal = ({ onClose }) => {
+const CreateGroupModal = ({ onClose, userId }) => {
     const [groupName, setGroupName] = useState("");
     const [selectedUsers, setSelectedUsers] = useState([]);
+    const [friendList, setFriendList] = useState([]);
+    const [searchTerm, setSearchTerm] = useState("");
+    useEffect(() => {
+        const fetchFriends = async () => {
+            try {
+                const response = await fetch(`http://localhost:8080/api/friends/list/${userId}`);
+                const data = await response.json();
+                setFriendList(Array.isArray(data) ? data : data.data || []);
+            } catch (error) {
+                console.error("Lỗi khi gọi API:", error);
+                setFriendList([]);
+            }
+        };
+
+        if (userId) {
+            fetchFriends();
+        }
+    }, [userId]);
+
+    const sanitizedFriendList = friendList.map(user => ({
+        ...user,
+        fullName: `${user.lastName} ${user.firstName}`.trim(),
+        avatar: user.avatarUrl || "/default-avatar.jpg"
+    }));
+
+    const filteredFriends = sanitizedFriendList.filter(user =>
+        user.fullName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     const toggleUser = (user) => {
         const exists = selectedUsers.find((u) => u.id === user.id);
@@ -24,19 +42,16 @@ const CreateGroupModal = ({ onClose }) => {
             setSelectedUsers([...selectedUsers, user]);
         }
     };
-
     return (
         <div className="fixed inset-0 bg-black/60 z-70 flex items-center justify-center">
             <div className="group-modal">
-
                 {/* Header */}
                 <div className="modal-header">
-                    <h2 className="text-base font-semibold">Tạo nhóm</h2>
+                    <h2 className="h2">Tạo nhóm</h2>
                     <button onClick={onClose} className="close-btn small">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
-
 
                 {/* Nhập tên nhóm */}
                 <input
@@ -47,19 +62,22 @@ const CreateGroupModal = ({ onClose }) => {
                     className="group-name-input"
                 />
 
-                {/*Search user*/}
+                {/* Tìm kiếm bạn */}
                 <input
                     type="text"
                     placeholder="Tìm theo tên"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     className="search-input"
                 />
 
-                {/* Main content */}
+                {/* Nội dung */}
                 <div className="modal-body">
+                    {/* Danh sách bạn bè */}
                     <div className="friend-list">
-                        <h3>Danh sách bạn bè</h3>
+                        <h3>Trò chuyện gần đây</h3>
                         <div className="friend-grid">
-                            {usersMock.map((user) => {
+                            {filteredFriends.map((user) => {
                                 const isSelected = selectedUsers.find((u) => u.id === user.id);
                                 return (
                                     <div
@@ -70,28 +88,28 @@ const CreateGroupModal = ({ onClose }) => {
                                         <div className="avatar-wrapper">
                                             <img
                                                 src={user.avatar}
-                                                alt={user.name}
-                                                sizes={30}
+                                                alt={user.fullName}
                                                 className="friend-avatar"
                                             />
                                         </div>
-                                        <span className="friend-name">{user.name}</span>
+                                        <span className="friend-name">{user.fullName}</span>
                                     </div>
                                 );
                             })}
                         </div>
                     </div>
 
-                    {selectedUsers.length > 0 && (
-                        <div className="selected-list">
-                            <h3>Đã chọn {selectedUsers.length}/100</h3>
+                    {/* Danh sách đã chọn */}
+                    <div className="selected-list">
+                        <h3>Đã chọn <span>{selectedUsers.length}/100</span></h3>
+                        <div className="selected-scroll">
                             {selectedUsers.map((user) => (
                                 <div key={user.id} className="selected-user">
-                                    <div className="flex items-center">
-                                        <img src={user.avatar} alt={user.name} />
-                                        <span title={user.name}>
-                        {user.name.length > 10 ? user.name.slice(0, 10) + "..." : user.name}
-                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <img src={user.avatar} alt={user.fullName} />
+                                        <span title={user.fullName}>
+                                            {user.fullName.length > 14 ? user.fullName.slice(0, 14) + "..." : user.fullName}
+                                        </span>
                                     </div>
                                     <X
                                         size={14}
@@ -101,9 +119,7 @@ const CreateGroupModal = ({ onClose }) => {
                                 </div>
                             ))}
                         </div>
-                    )}
-
-
+                    </div>
                 </div>
 
                 {/* Footer */}
@@ -111,11 +127,17 @@ const CreateGroupModal = ({ onClose }) => {
                     <button onClick={onClose} className="cancel-btn">Hủy</button>
                     <button
                         className="create-btn"
-                        disabled={selectedUsers.length < 2 || groupName.trim()=== ""}
+                        disabled={selectedUsers.length < 2 || groupName.trim() === ""}
+                        onClick={async () => {
+                            console.log("Tạo nhóm với tên:", groupName, "và thành viên:", selectedUsers);
+                            setTimeout(() => {
+                                onClose();
+                            }, 4000);
+
+                        }}
                     >
                         Tạo nhóm
                     </button>
-
                 </div>
             </div>
         </div>
