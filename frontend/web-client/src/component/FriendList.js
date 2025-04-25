@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "../pages/styles/FriendList.css"; // Đường dẫn đến file CSS của bạn
-import { FaSearch } from "react-icons/fa";
-
-const FriendList = ({ uid, token, onStartChat }) => {
+import { FaSearch,FaSyncAlt  } from "react-icons/fa";
+const FriendList = ({ uid, token, onStartChat, onClose }) => {
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -22,8 +21,8 @@ const FriendList = ({ uid, token, onStartChat }) => {
     try {
       const response = await fetch(`http://localhost:8080/api/friends/list/${uid}`, {
         headers: {
-          Authorization: `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (!response.ok) {
@@ -55,7 +54,7 @@ const FriendList = ({ uid, token, onStartChat }) => {
     }
 
     const query = searchQuery.toLowerCase();
-    const filtered = friends.filter(friend => {
+    const filtered = friends.filter((friend) => {
       const fullName = `${friend.firstName} ${friend.lastName}`.toLowerCase();
       const reverseName = `${friend.lastName} ${friend.firstName}`.toLowerCase();
       return fullName.includes(query) || reverseName.includes(query) || friend.email?.toLowerCase().includes(query);
@@ -66,18 +65,19 @@ const FriendList = ({ uid, token, onStartChat }) => {
 
   // Tạo cuộc trò chuyện mới với bạn bè
   const handleChatWithFriend = (friend) => {
-    onStartChat(friend);
+    onStartChat(friend); // Bắt đầu cuộc trò chuyện
+    onClose(); // Đóng sidebar sau khi chọn bạn bè
   };
 
   return (
     <div className="friend-sidebar">
       <div className="friend-sidebar-header">
-        <h3>Danh sách bạn bè</h3>
+        <h2>Danh sách bạn bè</h2>
         <button className="refresh-button" onClick={fetchFriends} disabled={loading}>
-          {loading ? "⏳" : "🔄"}
+          {loading ? "⏳" : <FaSyncAlt />}
         </button>
       </div>
-      
+
       <div className="friend-search">
         <FaSearch className="friend-search-icon" />
         <input
@@ -103,11 +103,11 @@ const FriendList = ({ uid, token, onStartChat }) => {
           {filteredFriends.map((friend) => (
             <li key={friend.id} className="friend-item-sidebar">
               <div className="friend-info">
-                <div 
+                <div
                   className="friend-avatar"
                   style={
-                    friend.avatarUrl 
-                      ? { backgroundImage: `url(${friend.avatarUrl})` } 
+                    friend.avatarUrl
+                      ? { backgroundImage: `url(${friend.avatarUrl})` }
                       : { backgroundColor: getAvatarColor(friend.firstName, friend.lastName) }
                   }
                 >
@@ -130,30 +130,27 @@ const FriendList = ({ uid, token, onStartChat }) => {
       ) : (
         <div className="no-friends-sidebar">
           <p>Chưa có bạn bè nào</p>
-          <p className="find-friends-note">Tìm bạn bè trong tab Bạn bè</p>
         </div>
       )}
     </div>
   );
 };
-
-// Helper functions
-function getInitials(firstName, lastName) {
-  const firstInitial = firstName ? firstName.charAt(0) : '';
-  const lastInitial = lastName ? lastName.charAt(0) : '';
-  return `${firstInitial}${lastInitial}`.toUpperCase();
-}
-
 function getAvatarColor(firstName, lastName) {
-  const nameString = `${firstName || ''}${lastName || ''}`;
+  const nameString = `${firstName || ""}${lastName || ""}`;
   let hash = 0;
   for (let i = 0; i < nameString.length; i++) {
     hash = nameString.charCodeAt(i) + ((hash << 5) - hash);
   }
-  
-  // Hue, Saturation, Lightness
-  const h = Math.abs(hash % 360);
-  return `hsl(${h}, 70%, 75%)`;
+
+  const h = Math.abs(hash % 360); // hue
+  return `hsl(${h}, 70%, 75%)`; // pastel màu nhẹ
 }
+
+function getInitials(firstName, lastName) {
+  const firstInitial = firstName ? firstName.charAt(0) : "";
+  const lastInitial = lastName ? lastName.charAt(0) : "";
+  return `${firstInitial}${lastInitial}`.toUpperCase();
+}
+
 
 export default FriendList;

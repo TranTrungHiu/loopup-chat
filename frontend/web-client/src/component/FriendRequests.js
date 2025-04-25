@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "../pages/styles/FriendRequests.css"; // Đường dẫn đến file CSS của bạn
-
+import {FaSyncAlt } from "react-icons/fa";
 const FriendRequests = ({ uid, token }) => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -111,7 +111,7 @@ const FriendRequests = ({ uid, token }) => {
       <h2>Lời mời kết bạn</h2>
       
       <button className="refresh-requests" onClick={fetchRequests} disabled={loading}>
-        {loading ? "⏳" : "🔄 Làm mới"}
+        {loading ? "⏳" :  <FaSyncAlt làm mới/>}
       </button>
       
       {loading ? (
@@ -174,32 +174,23 @@ const FriendRequests = ({ uid, token }) => {
 };
 
 // Helper functions
-function formatRequestTime(timestamp) {
-  if (!timestamp) return "";
-  
-  const date = new Date(timestamp);
+function formatRequestTime(createdAt) {
+  if (!createdAt || typeof createdAt !== "object" || !createdAt.seconds) return "";
+
+  const createdDate = new Date(createdAt.seconds * 1000); // convert seconds to milliseconds
   const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  
-  // Dưới 24 giờ
-  if (diff < 86400000) {
-    // Dưới 1 giờ
-    if (diff < 3600000) {
-      const minutes = Math.floor(diff / 60000);
-      return `${minutes} phút trước`;
-    }
-    // Dưới 24 giờ
-    const hours = Math.floor(diff / 3600000);
-    return `${hours} giờ trước`;
-  }
-  
-  // Định dạng ngày tháng nếu quá 24 giờ
-  return date.toLocaleDateString("vi-VN", {
-    day: "numeric",
-    month: "numeric",
-    year: "numeric"
-  });
+  const diff = Math.floor((now - createdDate) / 1000); // diff in seconds
+
+  if (diff < 60) return "Vừa xong";
+  if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)} ngày trước`;
+  if (diff < 2592000) return `${Math.floor(diff / 604800)} tuần trước`;
+  if (diff < 31536000) return `${Math.floor(diff / 2592000)} tháng trước`;
+  return `${Math.floor(diff / 31536000)} năm trước`;
 }
+
+
 
 function getInitials(firstName, lastName) {
   const firstInitial = firstName ? firstName.charAt(0) : '';

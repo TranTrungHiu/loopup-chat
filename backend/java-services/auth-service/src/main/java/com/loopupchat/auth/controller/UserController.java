@@ -2,6 +2,7 @@ package com.loopupchat.auth.controller;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -93,7 +94,6 @@ public class UserController {
     @GetMapping("/find")
     public ResponseEntity<?> searchUserByEmail(@RequestParam String email) {
         try {
-            // Tìm người dùng qua email trong Firestore
             CollectionReference usersRef = firestore.collection("users");
             Query query = usersRef.whereEqualTo("email", email);
             ApiFuture<QuerySnapshot> querySnapshot = query.get();
@@ -104,11 +104,10 @@ public class UserController {
                         .body(Map.of("message", "Không tìm thấy người dùng với email này"));
             }
 
-            // Lấy thông tin người dùng đầu tiên tìm thấy
             DocumentSnapshot userDoc = documents.get(0);
-            Map<String, Object> userData = userDoc.getData();
+            Map<String, Object> userData = new HashMap<>(userDoc.getData());
 
-            // Thêm ID vào dữ liệu
+            // Đảm bảo không null và định dạng đúng
             userData.put("id", userDoc.getId());
 
             return ResponseEntity.ok(userData);
@@ -137,3 +136,4 @@ public class UserController {
         }
     }
 }
+//

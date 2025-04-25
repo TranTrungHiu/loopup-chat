@@ -5,11 +5,13 @@ import "../pages/styles/InformationChat.css";
 import { FaBell, FaThumbtack, FaUserFriends, FaCog } from "react-icons/fa";
 import GroupManagement from "./GroupManagement";
 
-const InformationChat = ({ isGroupChat, isAdmin }) => {
+const InformationChat = ({ isGroupChat, isAdmin, user }) => {
+    //log avataUrl
+    console.log("Avatar URL:", user?.avatarUrl);
     const [showGroupManagement, setShowGroupManagement] = useState(false);
 
     const handleGroupManagementClick = () => {
-        if (true) { //Nhớ đổi thành isAdmin
+        if (isAdmin) {
             setShowGroupManagement(true);
         }
     };
@@ -19,24 +21,30 @@ const InformationChat = ({ isGroupChat, isAdmin }) => {
     };
 
     if (showGroupManagement) {
-        return <GroupManagement onBack={handleBack} isAdmin={true} />; //Nhớ đổi thành isAdmin
+        return <GroupManagement onBack={handleBack} isAdmin={isAdmin} />;
     }
+
+    const fullName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
 
     return (
         <div className="info-chat-container">
             <div className="info-header">
+                {/* Avatar */}
+                <div className="chat-user-avatar">
+                    {user?.avatarUrl ? (
+                        <img src={user?.avatarUrl} alt="Avatar" className="avatar-img" />
+                    ) : (
+                        (user?.firstName?.charAt(0) || "U").toUpperCase()
+                    )}
+                </div>
 
-                {/*//Image*/}
-                <div className="avatar-circle">TT</div>
-
-
-                {/*SHOW NAME*/}
+                {/* User name */}
                 <div className="info-name-section">
-                    <span className="info-name">Tran Minh Thong</span>
+                    <span className="info-name">{fullName || "Tên người dùng"}</span>
                     <button className="edit-button" title="Chỉnh sửa tên">✎</button>
                 </div>
 
-                {/*Function*/}
+                {/* Actions */}
                 <div className="info-actions">
                     <div className="action-item">
                         <FaBell />
@@ -51,10 +59,11 @@ const InformationChat = ({ isGroupChat, isAdmin }) => {
                         <span>Tạo nhóm<br />trò chuyện</span>
                     </div>
 
-                    {!isGroupChat && ( //Nhớ bỏ dấu ! đi
+                    {isGroupChat && (
                         <div
-                            className={`action-item ${!isAdmin ? "" : ""}`} //test thành công thì đổi cái "" đầu tiên thành disable
-                            onClick={handleGroupManagementClick}
+                            className={`action-item ${!isAdmin ? "disabled" : ""}`}
+                            onClick={isAdmin ? handleGroupManagementClick : undefined}
+                            title={isAdmin ? "Quản lý nhóm" : "Chỉ admin mới được truy cập"}
                         >
                             <FaCog />
                             <span>Quản lý<br />nhóm</span>
