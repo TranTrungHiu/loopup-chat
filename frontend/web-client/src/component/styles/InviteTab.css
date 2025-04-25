@@ -1,0 +1,38 @@
+.invite-tab-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  overflow: auto;
+}
+
+.modal-wrapper {
+  max-height: 90vh;
+  max-width: 90%;
+  overflow: auto;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Đảm bảo responsive cho các thiết bị khác nhau */
+@media (max-width: 768px) {
+  .modal-wrapper {
+    max-width: 95%;
+  }
+}

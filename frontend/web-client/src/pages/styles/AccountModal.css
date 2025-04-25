@@ -1,0 +1,291 @@
+/* AccountModal.css */
+.account-modal {
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  margin: 0 auto;
+  padding: 0;
+  background-color: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.account-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eaeaea;
+  background-color: #f8f9fa;
+}
+
+.account-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+.close-btn {
+  background-color: transparent;
+  border: none;
+  font-size: 18px;
+  color: #777;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  background-color: #f0f2f5;
+  color: #f03e3e;
+}
+
+.account-info {
+  padding: 0 0 20px;
+}
+
+.cover-photo {
+  height: 150px;
+  overflow: hidden;
+  position: relative;
+}
+
+.cover-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.change-cover-btn {
+  position: absolute;
+  right: 15px;
+  bottom: 15px;
+  background-color: rgba(255, 255, 255, 0.85);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.change-cover-btn:hover {
+  background-color: #fff;
+}
+
+.avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: -50px;
+  position: relative;
+}
+
+.avatar-container {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 4px solid white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  object-fit: cover;
+}
+
+.change-avatar-btn {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  background-color: #4e8ef7;
+  color: white;
+  border: 2px solid white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.change-avatar-btn:hover {
+  background-color: #3a76db;
+  transform: scale(1.05);
+}
+
+.avatar-section h2 {
+  margin: 10px 0 5px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #333;
+}
+
+.user-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #4caf50;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #4caf50;
+  border-radius: 50%;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #eaeaea;
+  margin-top: 15px;
+}
+
+.tab {
+  flex: 1;
+  padding: 12px;
+  text-align: center;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #777;
+}
+
+.tab.active {
+  color: #4e8ef7;
+  border-bottom: 2px solid #4e8ef7;
+}
+
+.tab:hover {
+  background-color: #f8f9fa;
+}
+
+.user-details {
+  padding: 20px;
+}
+
+.detail-group {
+  margin-bottom: 16px;
+}
+
+.detail-label {
+  font-size: 13px;
+  color: #777;
+  margin-bottom: 4px;
+}
+
+.detail-value {
+  font-size: 16px;
+  color: #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.edit-icon {
+  color: #777;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-icon:hover {
+  color: #4e8ef7;
+}
+
+.note {
+  background-color: #f8f9fa;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #666;
+  margin-top: 20px;
+}
+
+.update-btn {
+  background-color: #4e8ef7;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 16px;
+  margin: 10px 20px;
+  width: calc(100% - 40px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.update-btn:hover {
+  background-color: #3a76db;
+}
+
+.loading-info {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 300px;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(78, 142, 247, 0.2);
+  border-top-color: #4e8ef7;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

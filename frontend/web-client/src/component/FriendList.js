@@ -1,6 +1,50 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "../pages/styles/FriendList.css"; // Đường dẫn đến file CSS của bạn
-import { FaSearch,FaSyncAlt  } from "react-icons/fa";
+import { FaSearch, FaSyncAlt, FaUserFriends, FaComments } from "react-icons/fa";
+import { TextField, InputAdornment, Avatar, Button, Tooltip, CircularProgress, List, ListItem, ListItemAvatar, ListItemText, ListItemSecondaryAction, IconButton, Chip, Divider, Fade, Box } from "@mui/material";
+import { styled } from "@mui/material/styles";
+
+// Styled components
+const SearchField = styled(TextField)(({ theme }) => ({
+  margin: '10px 0',
+  width: '100%',
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 25,
+    backgroundColor: '#f0f2f5',
+    '&:hover': {
+      backgroundColor: '#e4e6e9',
+    },
+    '&.Mui-focused': {
+      backgroundColor: '#fff',
+      boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+    },
+  },
+}));
+
+const FriendAvatar = styled(Avatar)(({ theme }) => ({
+  width: 50,
+  height: 50,
+  border: '2px solid #fff',
+  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+}));
+
+const ChatButton = styled(IconButton)(({ theme }) => ({
+  backgroundColor: '#1877f2',
+  color: '#fff',
+  '&:hover': {
+    backgroundColor: '#0d6efd',
+  },
+}));
+
+const EmptyState = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '40px 20px',
+  color: '#65676b',
+}));
+
 const FriendList = ({ uid, token, onStartChat, onClose }) => {
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -72,69 +116,116 @@ const FriendList = ({ uid, token, onStartChat, onClose }) => {
   return (
     <div className="friend-sidebar">
       <div className="friend-sidebar-header">
-        <h2>Danh sách bạn bè</h2>
-        <button className="refresh-button" onClick={fetchFriends} disabled={loading}>
-          {loading ? "⏳" : <FaSyncAlt />}
-        </button>
+        <h2><FaUserFriends style={{ marginRight: '10px' }} /> Danh sách bạn bè</h2>
+        <Tooltip title="Làm mới danh sách" arrow>
+          <Button 
+            variant="contained" 
+            size="small" 
+            color="primary" 
+            onClick={fetchFriends} 
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <FaSyncAlt />}
+            sx={{ minWidth: 'auto', borderRadius: '20px' }}
+          >
+            {loading ? "" : "Làm mới"}
+          </Button>
+        </Tooltip>
       </div>
 
       <div className="friend-search">
-        <FaSearch className="friend-search-icon" />
-        <input
-          type="text"
-          placeholder="Tìm bạn"
+        <SearchField
+          placeholder="Tìm kiếm bạn bè"
+          variant="outlined"
+          size="small"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <FaSearch />
+              </InputAdornment>
+            ),
+          }}
         />
       </div>
 
       {loading ? (
-        <div className="friend-loading">
-          <div className="loading-spinner"></div>
-          <p>Đang tải...</p>
-        </div>
+        <Fade in={loading}>
+          <div className="friend-loading">
+            <CircularProgress size={50} />
+            <p>Đang tải danh sách bạn bè...</p>
+          </div>
+        </Fade>
       ) : error ? (
         <div className="friend-error">
           <p>{error}</p>
-          <button onClick={fetchFriends}>Thử lại</button>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={fetchFriends}
+          >
+            Thử lại
+          </Button>
         </div>
       ) : filteredFriends.length > 0 ? (
-        <ul className="friend-list-sidebar">
-          {filteredFriends.map((friend) => (
-            <li key={friend.id} className="friend-item-sidebar">
-              <div className="friend-info">
-                <div
-                  className="friend-avatar"
-                  style={
-                    friend.avatarUrl
-                      ? { backgroundImage: `url(${friend.avatarUrl})` }
-                      : { backgroundColor: getAvatarColor(friend.firstName, friend.lastName) }
+        <List sx={{ width: '100%', bgcolor: 'background.paper', padding: 0 }}>
+          {filteredFriends.map((friend, index) => (
+            <React.Fragment key={friend.id || friend.uid}>
+              <ListItem alignItems="flex-start">
+                <ListItemAvatar>
+                  <FriendAvatar
+                    src={friend.avatarUrl}
+                    alt={`${friend.firstName} ${friend.lastName}`}
+                    sx={{
+                      bgcolor: friend.avatarUrl ? undefined : getAvatarColor(friend.firstName, friend.lastName)
+                    }}
+                  >
+                    {!friend.avatarUrl && getInitials(friend.firstName, friend.lastName)}
+                  </FriendAvatar>
+                </ListItemAvatar>
+                <ListItemText
+                  primary={
+                    <span className="friend-name-text">
+                      {friend.firstName} {friend.lastName}
+                      {friend.isOnline && 
+                        <Chip 
+                          label="online" 
+                          color="success" 
+                          size="small" 
+                          sx={{ ml: 1, height: 20, fontSize: '0.6rem' }}
+                        />
+                      }
+                    </span>
                   }
-                >
-                  {!friend.avatarUrl && getInitials(friend.firstName, friend.lastName)}
-                </div>
-                <span className="friend-name">
-                  {friend.firstName} {friend.lastName}
-                </span>
-              </div>
-              <button
-                className="chat-with-friend"
-                onClick={() => handleChatWithFriend(friend)}
-                title={`Nhắn tin với ${friend.firstName} ${friend.lastName}`}
-              >
-                💬
-              </button>
-            </li>
+                  secondary={friend.email || "Không có email"}
+                />
+                <ListItemSecondaryAction>
+                  <Tooltip title={`Nhắn tin với ${friend.firstName}`} arrow>
+                    <ChatButton 
+                      edge="end" 
+                      aria-label="chat"
+                      onClick={() => handleChatWithFriend(friend)}
+                    >
+                      <FaComments />
+                    </ChatButton>
+                  </Tooltip>
+                </ListItemSecondaryAction>
+              </ListItem>
+              {index < filteredFriends.length - 1 && <Divider variant="inset" component="li" />}
+            </React.Fragment>
           ))}
-        </ul>
+        </List>
       ) : (
-        <div className="no-friends-sidebar">
+        <EmptyState>
+          <FaUserFriends size={50} style={{ opacity: 0.5, marginBottom: 20 }} />
           <p>Chưa có bạn bè nào</p>
-        </div>
+          <p>Hãy kết bạn để bắt đầu trò chuyện</p>
+        </EmptyState>
       )}
     </div>
   );
 };
+
 function getAvatarColor(firstName, lastName) {
   const nameString = `${firstName || ""}${lastName || ""}`;
   let hash = 0;
@@ -151,6 +242,5 @@ function getInitials(firstName, lastName) {
   const lastInitial = lastName ? lastName.charAt(0) : "";
   return `${firstInitial}${lastInitial}`.toUpperCase();
 }
-
 
 export default FriendList;

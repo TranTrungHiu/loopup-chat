@@ -1,0 +1,359 @@
+/* MessageItem.css */
+.message-item {
+  display: flex;
+  margin: 4px 0; /* Giảm margin để tin nhắn gần nhau hơn */
+  position: relative;
+  align-items: flex-end;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message-item.user {
+  justify-content: flex-end;
+}
+
+.message-avatar-container {
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.message-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border: 2px solid #fff;
+}
+
+.message-container {
+  max-width: 65%;
+  display: flex;
+  flex-direction: column;
+}
+
+.message-container.no-avatar {
+  margin-left: 48px; /* Match avatar width + margin */
+}
+
+.message-sender {
+  font-size: 12px;
+  margin-bottom: 3px;
+  color: #666;
+  padding-left: 8px;
+  font-weight: 500;
+}
+
+.message-bubble {
+  padding: 10px 14px;
+  border-radius: 18px;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  word-wrap: break-word;
+  min-width: 60px;
+  transition: all 0.2s ease;
+  max-width: 100%;
+}
+
+.message-bubble:hover {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+.user .message-bubble {
+  background-color: #5E259A;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.other .message-bubble {
+  background-color: #f0f0f0;
+  color: #222;
+  border-bottom-left-radius: 4px;
+}
+
+.message-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+/* Định dạng cho phần hiển thị thời gian bên trong bubble tin nhắn */
+.message-time-container-inside {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 4px;
+  padding-top: 2px;
+  font-size: 10px;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.message-time-container-inside.user {
+  justify-content: flex-end;
+}
+
+.message-time-container-inside.other {
+  justify-content: flex-start;
+}
+
+.message-bubble:hover .message-time-container-inside {
+  opacity: 1;
+}
+
+.message-time-container-inside .message-time {
+  margin: 0 2px;
+  font-size: 10px;
+}
+
+.user .message-time-container-inside {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.user .message-time-container-inside .message-time {
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 400;
+}
+
+.other .message-time-container-inside .message-time {
+  color: #777;
+}
+
+.message-time-container-inside .message-status-icon {
+  font-size: 11px;
+  margin-left: 2px;
+}
+
+.message-time-container-inside .sent {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.message-time-container-inside .seen {
+  color: #4CAF50;
+}
+
+/* Ẩn phần hiển thị thời gian bên ngoài bubble tin nhắn vì không còn cần nữa */
+.message-time-container {
+  display: none;
+}
+
+.message-status-icon {
+  display: flex;
+  align-items: center;
+  margin-left: 4px;
+  font-size: 12px;
+}
+
+.sent {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.seen {
+  color: #4CAF50;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.2));
+}
+
+.error {
+  color: #F44336;
+}
+
+/* Tin nhắn hình ảnh */
+.message-image-container {
+  padding: 4px;
+  max-width: 280px;
+}
+
+.message-image {
+  width: 100%;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.message-image:hover {
+  transform: scale(1.02);
+}
+
+.image-loader {
+  height: 150px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f5f5;
+  color: #777;
+  border-radius: 12px;
+}
+
+/* Tin nhắn file */
+.message-file {
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  width: 100%;
+}
+
+.file-icon {
+  font-size: 24px;
+  margin-right: 10px;
+  color: #5E259A;
+}
+
+.other .file-icon {
+  color: #5E259A;
+}
+
+.user .file-icon {
+  color: white;
+}
+
+.file-info {
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.file-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.file-size {
+  font-size: 11px;
+  color: #999;
+}
+
+.user .file-size {
+  color: #E0E0E0;
+}
+
+.file-download {
+  color: inherit;
+  margin-left: 10px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.file-download:hover {
+  opacity: 1;
+}
+
+/* Kiểu tin nhắn đặc biệt */
+.system-message {
+  text-align: center;
+  margin: 12px 0;
+  font-style: italic;
+  color: #777;
+  font-size: 12px;
+}
+
+/* Debug styles */
+.debug-message {
+  background-color: #f8f9fa;
+  border: 1px dashed #dc3545;
+}
+
+.user .debug-message {
+  background-color: #563d7c;
+  border: 1px dashed #ced4da;
+}
+
+.debug-button {
+  display: block;
+  margin-top: 5px;
+  padding: 2px 5px;
+  font-size: 11px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  color: #212529;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.user .debug-button {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.debug-button:hover {
+  background-color: #e9ecef;
+}
+
+.user .debug-button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Nhóm tin nhắn từ cùng một người gửi */
+.message-item + .message-item {
+  margin-top: 2px;
+}
+
+/* Tạo space giữa các nhóm tin nhắn từ người khác nhau */
+.message-item.user + .message-item.other,
+.message-item.other + .message-item.user {
+  margin-top: 12px;
+}
+
+/* Hiệu ứng cho bubble tin nhắn */
+@media (hover: hover) {
+  .message-bubble {
+    transition: transform 0.2s ease;
+  }
+  
+  .message-bubble:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+  .message-container {
+    max-width: 75%;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .message-container {
+    max-width: 85%;
+  }
+  
+  .message-text {
+    font-size: 14px;
+  }
+}
+
+/* Hiệu ứng load tin nhắn mới */
+@keyframes newMessagePulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1.01);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.message-item:last-child {
+  animation: newMessagePulse 0.5s ease;
+}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import "./styles/Home.css";
+import "./styles/AccountModal.css"; // Import CSS mới cho modal thông tin tài khoản
 import Toast, { showToast } from "../component/Toast";
 import { toast, ToastContainer, Zoom } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -21,6 +22,8 @@ import {
   ThemeProvider,
   createTheme,
 } from "@mui/material";
+import ChatHeader from "../component/ChatHeader";
+import MessageItem from "../component/MessageItem";
 import {
   FaCog,
   FaUserPlus,
@@ -37,11 +40,14 @@ import {
   FaFileAlt,
   FaSmile,
   FaImage,
+  FaCamera,
   FaPhoneAlt,
   FaBell,
   FaTimes,
   FaCheck,
   FaEnvelope,
+  FaSpinner,
+  FaExclamationCircle,
 } from "react-icons/fa";
 import { BsSendFill, BsChatDots, BsPersonPlus } from "react-icons/bs";
 import { BiSearch, BiMessageRounded } from "react-icons/bi";
@@ -120,13 +126,13 @@ const Home = () => {
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-  
+
     try {
       const formData = new FormData();
       formData.append("image", file);
       formData.append("chatId", currentChat.chatId);
       formData.append("sender", uid);
-  
+
       const response = await fetch("http://localhost:8080/api/messages/image", {
         method: "POST",
         headers: {
@@ -134,11 +140,11 @@ const Home = () => {
         },
         body: formData,
       });
-  
+
       if (!response.ok) {
         throw new Error("Không thể gửi ảnh");
       }
-  
+
       const data = await response.json();
       setMessages((prevMessages) => [...prevMessages, data]);
       alert("Ảnh đã được gửi thành công!");
@@ -152,13 +158,13 @@ const Home = () => {
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-  
+
     try {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("chatId", currentChat.chatId);
       formData.append("sender", uid);
-  
+
       const response = await fetch("http://localhost:8080/api/messages/file", {
         method: "POST",
         headers: {
@@ -166,11 +172,11 @@ const Home = () => {
         },
         body: formData,
       });
-  
+
       if (!response.ok) {
         throw new Error("Không thể gửi file");
       }
-  
+
       const data = await response.json();
       setMessages((prevMessages) => [...prevMessages, data]);
       alert("File đã được gửi thành công!");
@@ -1443,163 +1449,79 @@ const Home = () => {
             />
           </div>
         )}
-        {tabs === "Chat" && (
-          <div className="chat-main">
-            {currentChat && currentParticipant ? (
-              <>
-                <div className="chat-header">
-                  <div className="chat-user">
-                    <div>
-                      <div className="chat-user-avatar">
-                        <img
-                          src={
-                            currentChat.isGroupChat
-                              ? currentChat.avataGroupChatUrl || "/default-group-avatar.png"
-                              : currentParticipant.avatarUrl || "/default-avatar.png"
-                          }
-                          alt={currentChat.isGroupChat ? "group avatar" : "user avatar"}
-                          onError={(e) => {
-                            e.target.src = currentChat.isGroupChat
-                              ? "/default-group-avatar.png"
-                              : "/default-avatar.png";
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <p className="chat-user-name">
-                          {currentChat.isGroupChat
-                            ? currentChat.groupName || "Nhóm không tên"
-                            : `${currentParticipant.firstName} ${currentParticipant.lastName}`}
-                        </p>
-                        {!currentChat.isGroupChat && (
-                          <p className="chat-status">Đang hoạt động</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="chat-actions">
-                      <button
-                        className="icon-button"
-                        title="Gọi video"
-                        onClick={handleStartVideoCall}
-                      >
-                        <FaVideo size={20} />
-                      </button>
-                      <button
-                        className="icon-button"
-                        title="Thông tin người dùng"
-                        onClick={() => setChatInfor(!chatInfor)}
-                      >
-                        <FaInfoCircle size={20} />
-                      </button>
-                    </div>
+        {tabs === "Chat" && currentChat && currentParticipant ? (
+          <>
+            <div className="chat-area">
+              <ChatHeader
+                currentChat={currentChat}
+                currentParticipant={currentParticipant}
+                onInfoClick={() => setChatInfor(!chatInfor)}
+                onVideoCall={handleStartVideoCall}
+                onSearch={() => {}}
+              />
+
+              <div className="chat-content" ref={chatContentRef}>
+                {isLoadingMessages ? (
+                  <div className="loading-messages">
+                    <p>Đang tải tin nhắn...</p>
                   </div>
-                </div>
-                <div className="chat-content" ref={chatContentRef}>
-                  {isLoadingMessages ? (
-                    <div className="loading-messages">
-                      <p>Đang tải tin nhắn...</p>
-                    </div>
-                  ) : messageError ? (
-                    <div className="message-error">
-                      <p>{messageError}</p>
-                      <button onClick={() => loadMessages(currentChat.chatId)}>
-                        Thử lại
-                      </button>
-                    </div>
-                  ) : messages && messages.length > 0 ? (
-                    <div className="messages-wrapper">
-                      {messages.map((msg, index) => {
-                        const isCurrentUser =
-                          msg.sender === uid ||
-                          msg.senderId === uid ||
-                          msg.senderId === "1";
-                        const isPending = msg.pending === true;
-                        const hasError = msg.error === true;
+                ) : messageError ? (
+                  <div className="message-error">
+                    <p>{messageError}</p>
+                    <button onClick={() => loadMessages(currentChat.chatId)}>
+                      Thử lại
+                    </button>
+                  </div>
+                ) : messages && messages.length > 0 ? (
+                  <div className="messages-wrapper">
+                    {messages.map((msg, index) => {
+                      const isCurrentUser = msg.sender === uid;
+                      const showAvatar =
+                        index === 0 ||
+                        (index > 0 &&
+                          messages[index - 1].sender !== msg.sender);
 
-                        // Định dạng thời gian
-                        const formatTime = (timestamp) => {
-                          try {
-                            let date;
-                            if (timestamp?.seconds) {
-                              date = new Date(timestamp.seconds * 1000);
-                            } else {
-                              date = new Date(timestamp);
-                            }
-                            if (!isNaN(date.getTime())) {
-                              const hour = date.getHours().toString().padStart(2, "0");
-                              const minute = date.getMinutes().toString().padStart(2, "0");
-                              return `${hour}:${minute}`;
-                            }
-                            return "";
-                          } catch (error) {
-                            console.error("Error formatting time:", error);
-                            return "";
+                      // Sử dụng component MessageItem để render tin nhắn
+                      return (
+                        <MessageItem
+                          key={msg.id || `msg-${index}`}
+                          message={msg}
+                          isCurrentUser={isCurrentUser}
+                          showAvatar={showAvatar}
+                          participant={
+                            !isCurrentUser ? currentParticipant : userInfo
                           }
-                        };
+                          previousSender={
+                            index > 0 ? messages[index - 1].sender : null
+                          }
+                        />
+                      );
+                    })}
+                    <div ref={messagesEndRef} />
+                  </div>
+                ) : (
+                  <div className="no-messages">
+                    <img src="/logo.png" alt="Logo" className="chat-logo" />
+                    <p>Chưa có tin nhắn nào</p>
+                    <p>Hãy bắt đầu cuộc trò chuyện</p>
+                  </div>
+                )}
+              </div>
 
-                        return (
-                          <div
-                            key={msg.id || `msg-${index}`}
-                            className={`message-container ${
-                              isCurrentUser ? "message-right" : "message-left"
-                            }`}
-                          >
-                            <div
-                              className={`message ${
-                                isCurrentUser ? "current-user" : "other-user"
-                              } ${isPending ? "pending" : ""} ${
-                                hasError ? "error" : ""
-                              }`}
-                            >
-                              <div className="message-body">
-                                <span className="message-text">
-                                  {msg.message || msg.text || "Không có nội dung"}
-                                </span>
-                                {isPending && (
-                                  <span className="status-indicator pending">⏳</span>
-                                )}
-                                {hasError && (
-                                  <span className="status-indicator error">❌</span>
-                                )}
-                              </div>
-                              <div className="message-meta">
-                                <span className="message-time">
-                                  {formatTime(msg.timestamp)}
-                                </span>
-                                {isCurrentUser && !isPending && !hasError && (
-                                  <span className="message-status">
-                                    {msg.readBy &&
-                                    Object.keys(msg.readBy).some((id) => id !== uid) ? (
-                                      <span title="Đã xem" className="read-status">
-                                        <FaCheck className="status-icon double" />
-                                        <FaCheck className="status-icon double overlay" />
-                                      </span>
-                                    ) : (
-                                      <span title="Đã gửi" className="sent-status">
-                                        <FaCheck className="status-icon" />
-                                      </span>
-                                    )}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      <div ref={messagesEndRef} />
-                    </div>
-                  ) : (
-                    <div className="no-messages">
-                      <p>Chưa có tin nhắn nào</p>
-                      <p>Hãy bắt đầu cuộc trò chuyện</p>
-                    </div>
-                  )}
-                </div>
-                <div className="chat-input-area">
+              <div className="chat-input-area">
+                <div className="chat-input-container">
+                  <button
+                    className="emoji-btn"
+                    title="Chọn emoji"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  >
+                    <FaSmile />
+                  </button>
+
                   <input
                     ref={messageInputRef}
                     type="text"
-                    placeholder="Tin nhắn"
+                    placeholder="Tin nhắn..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onFocus={handleInputFocus}
@@ -1607,127 +1529,76 @@ const Home = () => {
                       if (e.key === "Enter") handleSendMessage();
                     }}
                   />
-                  {/* Emoji Picker */}
-                  <button
-                    className="emoji-btn"
-                    title="Chọn emoji"
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                  >
-                    <FaSmile size={30} />
-                  </button>
-                  {showEmojiPicker && (
-                    <div className="emoji-picker">
-                      <EmojiPicker onEmojiClick={handleEmojiClick} />
-                    </div>
-                  )}
 
-                  {/* File Upload */}
-                  <label htmlFor="file-upload" className="file-upload-label">
-                    <FaFileAlt size={30} />
-                  </label>
-                  <input
-                    type="file"
-                    id="file-upload"
-                    className="file-upload-input"
-                    onChange={handleFileUpload}
-                  />
+                  <div className="input-actions">
+                    {/* File Upload */}
+                    <label
+                      htmlFor="file-upload"
+                      className="file-upload-label"
+                      title="Gửi file"
+                    >
+                      <FaFileAlt />
+                    </label>
+                    <input
+                      type="file"
+                      id="file-upload"
+                      className="file-upload-input"
+                      onChange={handleFileUpload}
+                    />
 
-                  {/* Image Upload */}
-                  <label htmlFor="image-upload" className="image-upload-label">
-                    <FaImage size={30} />
-                  </label>
-                  <input
-                    type="file"
-                    id="image-upload"
-                    className="image-upload-input"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                  />
+                    {/* Image Upload */}
+                    <label
+                      htmlFor="image-upload"
+                      className="image-upload-label"
+                      title="Gửi ảnh"
+                    >
+                      <FaImage />
+                    </label>
+                    <input
+                      type="file"
+                      id="image-upload"
+                      className="image-upload-input"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                    />
 
-                  {/* Button Send */}
-                  <button
-                    className="send-btn"
-                    onClick={handleSendMessage}
-                    disabled={!newMessage.trim()}
-                  >
-                    <BsSendFill />
-                  </button>
+                    {/* Button Send */}
+                    <button
+                      className="send-btn"
+                      onClick={handleSendMessage}
+                      disabled={!newMessage.trim()}
+                    >
+                      <BsSendFill />
+                    </button>
+                  </div>
                 </div>
-              </>
-            ) : (
-              <div className="no-chat-selected">
-                <p>Vui lòng chọn một cuộc trò chuyện để bắt đầu</p>
-                {!chats || chats.length === 0 ? (
-                  <button
-                    className="find-friend-btn"
-                    onClick={() => setIsUserModalOpen(true)}
-                  >
-                    Tìm bạn để trò chuyện
-                  </button>
-                ) : null}
+
+                {showEmojiPicker && (
+                  <div className="emoji-picker-container">
+                    <EmojiPicker onEmojiClick={handleEmojiClick} />
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+          </>
+        ) : (
+          <div className="no-chat-selected">
+            <img src="/logo.png" alt="Logo" className="welcome-logo" />
+            <h2>Chào mừng đến với Loopup Chat</h2>
+            <p>Vui lòng chọn một cuộc trò chuyện để bắt đầu</p>
+            {!chats || chats.length === 0 ? (
+              <button
+                className="find-friend-btn"
+                onClick={() => setIsFindFriendModalOpen(true)}
+              >
+                <FaUserPlus /> Tìm bạn để trò chuyện
+              </button>
+            ) : null}
           </div>
         )}
-        {tabs === "Invite" && <InviteTab uid={uid} token={token} />}
-        <Modal
-          isOpen={isUserModalOpen}
-          onRequestClose={() => setIsUserModalOpen(false)}
-          className="modal"
-          overlayClassName="overlay"
-        >
-          <h3>Tìm bạn bằng email</h3>
-          <div className="search-form">
-            <input
-              type="email"
-              value={searchEmail}
-              onChange={(e) => setSearchEmail(e.target.value)}
-              placeholder="Nhập email người dùng"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSearchUser();
-              }}
-            />
-            <button onClick={handleSearchUser}>Tìm</button>
-          </div>
-          {foundUser && (
-            <div className="user-result">
-              <p>
-                👤 {foundUser.lastName} {foundUser.firstName}
-              </p>
-              {isFriend === "accepted" && (
-                <button
-                  className="chat-btn"
-                  onClick={() => {
-                    handleStartChat(foundUser);
-                    setIsUserModalOpen(false);
-                  }}
-                >
-                  Nhắn tin
-                </button>
-              )}
-              {isFriend === "pending" && (
-                <button className="pending-btn" disabled>
-                  Đang gửi kết bạn
-                </button>
-              )}
-              {isFriend === "none" && (
-                <button className="add-btn" onClick={handleSendRequest}>
-                  Kết bạn
-                </button>
-              )}
-            </div>
-          )}
-          {showNotFound && <p className="not-found-msg">Không tìm thấy</p>}
-          <button
-            className="close-btn"
-            onClick={() => setIsUserModalOpen(false)}
-          >
-            Đóng
-          </button>
-          <button className="show-friends-btn" onClick={fetchFriends}>
-            Xem danh sách bạn bè
-          </button>
-        </Modal>
+        {tabs === "Invite" && (
+          <InviteTab uid={uid} token={token} onClose={() => setTabs("Chat")} />
+        )}
         <Modal
           isOpen={isAccountModalOpen}
           onRequestClose={() => setIsAccountModalOpen(false)}
@@ -1735,53 +1606,103 @@ const Home = () => {
           overlayClassName="overlay"
         >
           <div className="account-header">
-            <h2>Thông tin người dùng</h2>
+            <h2>Thông tin tài khoản</h2>
             <button
               className="close-btn"
               onClick={() => setIsAccountModalOpen(false)}
             >
-              X
+              <FaTimes />
             </button>
           </div>
+
           {userInfo ? (
             <div className="account-info">
               <div className="cover-photo">
                 <img
                   src="https://cdn.statically.io/img/timelinecovers.pro/f=webp/facebook-cover/thumbs540/forest_in_the_morning-facebook-cover.jpg"
-                  alt="cover"
+                  alt="Ảnh bìa"
                 />
+                <button className="change-cover-btn">
+                  <FaImage size={12} /> Thay đổi ảnh bìa
+                </button>
               </div>
+
               <div className="avatar-section">
-                <img
-                  className="avatar"
-                  src={userInfo.avatarUrl || "/default-avatar.png"}
-                  alt="avatar"
-                  onError={(e) => {
-                    e.target.src = "/default-avatar.png";
-                  }}
-                />
+                <div className="avatar-container">
+                  <img
+                    className="avatar"
+                    src={userInfo.avatarUrl || "/default-avatar.png"}
+                    alt="avatar"
+                    onError={(e) => {
+                      e.target.src = "/default-avatar.png";
+                    }}
+                  />
+                  <button
+                    className="change-avatar-btn"
+                    title="Thay đổi ảnh đại diện"
+                  >
+                    <FaCamera size={14} />
+                  </button>
+                </div>
+
                 <h2>
-                  {userInfo.lastName} {userInfo.firstName} ✏️
+                  {userInfo.lastName} {userInfo.firstName}
                 </h2>
+
+                <div className="user-status">
+                  <div className="status-dot"></div>
+                  <span>Đang hoạt động</span>
+                </div>
               </div>
+
+              <div className="tabs">
+                <div className="tab active">Thông tin cá nhân</div>
+                <div className="tab">Cài đặt</div>
+              </div>
+
               <div className="user-details">
-                <p>
-                  <strong>Email:</strong> {userInfo.email}
-                </p>
-                <p>
-                  <strong>Giới tính:</strong>{" "}
-                  {userInfo.gender === "male" ? "Nam" : "Nữ"}
-                </p>
-                <p className="note">
-                  Chỉ bạn bè có lưu số của bạn trong danh bạ máy xem được số này
-                </p>
+                <div className="detail-group">
+                  <div className="detail-label">Họ</div>
+                  <div className="detail-value">
+                    {userInfo.lastName || "Chưa cập nhật"}
+                    <FaPencilAlt size={14} className="edit-icon" />
+                  </div>
+                </div>
+
+                <div className="detail-group">
+                  <div className="detail-label">Tên</div>
+                  <div className="detail-value">
+                    {userInfo.firstName || "Chưa cập nhật"}
+                    <FaPencilAlt size={14} className="edit-icon" />
+                  </div>
+                </div>
+
+                <div className="detail-group">
+                  <div className="detail-label">Email</div>
+                  <div className="detail-value">{userInfo.email}</div>
+                </div>
+
+                <div className="detail-group">
+                  <div className="detail-label">Giới tính</div>
+                  <div className="detail-value">
+                    {userInfo.gender === "male" ? "Nam" : "Nữ"}
+                    <FaPencilAlt size={14} className="edit-icon" />
+                  </div>
+                </div>
+
+                <div className="note">
+                  Thông tin cá nhân của bạn được bảo mật. Chỉ những người bạn
+                  kết nối mới có thể xem thông tin chi tiết.
+                </div>
               </div>
+
               <button className="update-btn">
-                <FaPencilAlt size={20} /> Cập nhật
+                <FaCheck size={16} /> Lưu thay đổi
               </button>
             </div>
           ) : (
             <div className="loading-info">
+              <div className="loading-spinner"></div>
               <p>Đang tải thông tin...</p>
             </div>
           )}
@@ -1857,13 +1778,13 @@ const Home = () => {
         />
         {currentParticipant && tabs === "Chat" && chatInfor && (
           <InformationChat
-              user={currentParticipant}
-              isGroupChat={currentChat?.isGroupChat || false}
-              isAdmin={currentChat?.adminId === uid}
-              chat={currentChat} // Thêm prop chat
-              uid={uid}
+            user={currentParticipant}
+            isGroupChat={currentChat?.isGroupChat || false}
+            isAdmin={currentChat?.adminId === uid}
+            chat={currentChat} // Thêm prop chat
+            uid={uid}
           />
-      )}
+        )}
         <Modal
           isOpen={isVideoCall}
           onRequestClose={handleEndCall}

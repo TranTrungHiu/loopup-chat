@@ -1,93 +1,489 @@
 /* InformationChat.css */
 
+/* Thêm CSS để hiển thị modal ở giữa màn hình */
+.info-chat-modal-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    overflow: auto;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease-out;
+}
+
+/* Khi đang tắt modal, xóa ngay backdrop-filter để tránh màn hình bị mờ */
+.info-chat-modal-container.removing {
+    backdrop-filter: none;
+    background-color: rgba(0, 0, 0, 0);
+    pointer-events: none;
+}
+
+.info-chat-modal-wrapper {
+    max-height: 90vh;
+    max-width: 90%;
+    overflow: auto;
+    will-change: transform, opacity;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.animate-in {
+    animation: fadeInSlide 0.3s ease-out forwards;
+}
+
+.animate-out {
+    animation: fadeOutSlide 0.3s ease-in forwards;
+}
+
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes fadeOutSlide {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+}
+
+/* CSS cũ của InformationChat với cải tiến */
 .info-chat-container {
     background-color: #ffffff;
     color: #1f1f1f;
-    width: 300px;
-    padding: 12px;
-    font-family: Arial, sans-serif;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    justify-content: center;
-    align-items: center;
+    width: 360px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+    padding: 0; /* Bỏ padding mặc định để header có thể mở rộng đến mép */
+}
+
+/* Header background gradient */
+.info-header-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 120px; /* Chiều cao của header */
+    background: linear-gradient(to bottom, #5E259A, #7846B7);
+    z-index: 0;
 }
 
 .info-header {
     display: flex;
     flex-direction: column;
     align-items: center;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 16px;
-    justify-content: center;
+    padding: 30px 20px 24px;
+    position: relative;
+    z-index: 1; /* Đảm bảo hiển thị trên background */
+    margin-bottom: 0;
 }
 
-.avatar-circle {
-    background-color: #b29eff;
-    color: #fff;
-    width: 52px;
-    height: 52px;
+/* Nút đóng đẹp mắt */
+.close-info-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border: none;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
-    font-size: 22px;
-    margin-bottom: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.close-info-btn:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+    transform: rotate(90deg);
+}
+
+.close-info-btn:focus {
+    outline: none;
 }
 
 .info-name-section {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-bottom: 12px;
+    gap: 8px;
+    margin-bottom: 4px;
+    z-index: 1;
 }
 
 .info-name {
-    font-size: 16px;
-    font-weight: bold;
-    color: #1f1f1f;
+    font-size: 20px;
+    font-weight: 600;
+    color: #000000;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .edit-button {
     background: none;
     border: none;
-    color: #888;
-    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 16px;
     cursor: pointer;
-}
-
-.info-actions {
+    transition: color 0.2s;
+    padding: 5px;
+    border-radius: 50%;
     display: flex;
-    justify-content: space-between;
-    width: 100%;
-    margin-top: 8px;
+    align-items: center;
+    justify-content: center;
 }
 
-.action-item {
+.edit-button:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Cải thiện online status */
+.online-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    margin-top: 4px;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 5px 10px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.status-indicator:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-dot.online {
+    background-color: #42de64;
+    box-shadow: 0 0 0 1px rgba(66, 222, 100, 0.3), 0 0 5px rgba(66, 222, 100, 0.5);
+    animation: pulseOnline 2s infinite;
+}
+
+.status-dot.offline {
+    background-color: #bbb;
+}
+
+@keyframes pulseOnline {
+    0% {
+        box-shadow: 0 0 0 0 rgba(66, 222, 100, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 5px rgba(66, 222, 100, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(66, 222, 100, 0);
+    }
+}
+
+.status-text {
+    font-weight: 500;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Online status indicator on avatar */
+.avatar-status-indicator {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    z-index: 10; /* Tăng z-index để hiển thị trước avatar */
+}
+
+.avatar-status-indicator.online {
+    background-color: #42de64;
+    color: #42de64;
+}
+
+.avatar-status-indicator.offline {
+    background-color: #bbb;
+    color: #bbb;
+}
+
+/* Communication options - Nằm dưới header */
+.communication-options {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    padding: 20px 0;
+    background-color: #ffffff;
+}
+
+.comm-option {
     display: flex;
     flex-direction: column;
     align-items: center;
-    font-size: 12px;
-    color: #555;
-    cursor: pointer;
-    transition: color 0.2s;
+    gap: 6px;
 }
 
-.action-item:hover {
-    color: #000;
-}
-
-.chat-user-avatar {
-    width: 40px;
-    height: 40px;
+.comm-button {
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
-    margin-right: 15px;
-    overflow: hidden;
-    border: 1px solid #eaeaea;
-    margin: 15px;
+    border: none;
+    background-color: #f0f2f5;
+    color: #5E259A;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
+
+.comm-button:hover {
+    background-color: rgba(94, 37, 154, 0.1);
+    color: #5E259A;
+    transform: translateY(-2px);
+}
+
+.comm-option span {
+    font-size: 12px;
+    color: #65676b;
+    font-weight: 500;
+}
+
+/* Separator line */
+.separator {
+    height: 1px;
+    background-color: #E4E6EB;
+    margin: 0;
+    width: 100%;
+}
+
+/* Chat Actions Redesigned */
+.chat-actions {
+    padding: 8px 0;
+}
+
+.action-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.action-row:hover {
+    background-color: #F2F3F5;
+}
+
+.action-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #616161;
+    margin-right: 16px;
+    font-size: 18px;
+}
+
+.action-text {
+    flex: 1;
+    font-size: 15px;
+    color: #111;
+}
+
+/* Shared media section */
+.shared-media-section {
+    padding: 16px 20px;
+}
+
+.section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1f1f1f;
+    margin-bottom: 12px;
+}
+
+.shared-images {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.shared-image-placeholder {
+    aspect-ratio: 1;
+    background-color: #f0f2f5;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #65676b;
+    font-size: 24px;
+}
+
+.view-more-media {
+    aspect-ratio: 1;
+    background-color: rgba(94, 37, 154, 0.05);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #5E259A;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.view-more-media:hover {
+    background-color: rgba(94, 37, 154, 0.1);
+}
+
+/* Chat avatar with camera overlay - ở trong header gradient */
+.chat-user-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid rgba(255, 255, 255, 0.8);
+    margin: 0 auto 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    position: relative;
+    transition: all 0.3s ease;
+    z-index: 1;
+}
+
+.chat-user-avatar:hover {
+    border-color: #ffffff;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
 .chat-user-avatar img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.change-avatar-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 0;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.chat-user-avatar:hover .change-avatar-overlay {
+    opacity: 1;
+}
+
+.camera-icon {
+    color: white;
+    font-size: 16px;
+}
+
+/* Avatar text fallback */
+.avatar-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 32px;
+    font-weight: bold;
+    color: #ffffff;
+    background: linear-gradient(45deg, #7846B7, #9665D5);
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Đảm bảo responsive cho các thiết bị khác nhau */
+@media (max-width: 768px) {
+    .info-chat-modal-wrapper {
+        max-width: 95%;
+    }
+    
+    .info-chat-container {
+        width: 320px;
+    }
+    
+    .chat-user-avatar {
+        width: 70px;
+        height: 70px;
+    }
+    
+    .communication-options {
+        gap: 16px;
+    }
+    
+    .comm-button {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+}
+
+/* Máy tính bảng và điện thoại nhỏ hơn */
+@media (max-width: 480px) {
+    .info-chat-container {
+        width: 300px;
+    }
+    
+    .info-name {
+        font-size: 18px;
+    }
+    
+    .shared-images {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .action-icon {
+        margin-right: 12px;
+    }
+    
+    .action-text {
+        font-size: 14px;
+    }
 }

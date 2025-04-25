@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "../pages/styles/FriendRequests.css"; // Đường dẫn đến file CSS của bạn
-import { FaSyncAlt, FaUserCheck, FaUserTimes, FaBell } from "react-icons/fa";
+import { FaSyncAlt, FaUserCheck, FaUserTimes, FaBell, FaTimes, FaUserPlus } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./styles/Toast.css";
 
-const FriendRequests = ({ uid, token }) => {
+const FriendRequests = ({ uid, token, onClose }) => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -178,14 +178,20 @@ const FriendRequests = ({ uid, token }) => {
   
   return (
     <div className="friend-requests-container">
-      <h2>
-        <FaBell className="request-icon" />
-        Lời mời kết bạn
-      </h2>
-      
-      <button className="refresh-requests" onClick={fetchRequests} disabled={loading}>
-        {loading ? "⏳" : <FaSyncAlt />}
-      </button>
+      <div className="friend-requests-header">
+        <div className="header-title">
+          <FaBell className="request-icon" />
+          <h2>Lời mời kết bạn</h2>
+        </div>
+        <div className="header-actions">
+          <button className="refresh-requests" onClick={fetchRequests} disabled={loading} title="Làm mới">
+            {loading ? "⏳" : <FaSyncAlt />}
+          </button>
+          <button className="close-requests" onClick={onClose} title="Đóng">
+            <FaTimes />
+          </button>
+        </div>
+      </div>
       
       {loading ? (
         <div className="loading-requests">
@@ -228,7 +234,7 @@ const FriendRequests = ({ uid, token }) => {
                     `${request.fromUser.firstName} ${request.fromUser.lastName}`
                   )}
                 >
-                  Đồng ý
+                  <FaUserCheck /> Đồng ý
                 </button>
                 <button 
                   className="reject-button"
@@ -237,7 +243,7 @@ const FriendRequests = ({ uid, token }) => {
                     `${request.fromUser.firstName} ${request.fromUser.lastName}`
                   )}
                 >
-                  Từ chối
+                  <FaUserTimes /> Từ chối
                 </button>
               </div>
             </li>
@@ -245,7 +251,11 @@ const FriendRequests = ({ uid, token }) => {
         </ul>
       ) : (
         <div className="no-requests">
+          <div className="empty-state-icon">
+            <FaUserPlus />
+          </div>
           <p>Không có lời mời kết bạn nào.</p>
+          <p className="empty-subtitle">Khi có người gửi lời mời kết bạn, bạn sẽ thấy ở đây.</p>
         </div>
       )}
       <ToastContainer />

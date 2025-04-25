@@ -1,23 +1,7 @@
 import React from "react";
-import {
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  Avatar,
-  Typography,
-  Box,
-  CircularProgress,
-  Paper,
-  Divider,
-  Button,
-} from "@mui/material";
-import {
-  Refresh as RefreshIcon,
-  Search as SearchIcon,
-  Chat as ChatIcon,
-  Group as GroupIcon,
-} from "@mui/icons-material";
+import ChatItem from "./ChatItem";
+import { FaCommentSlash, FaSpinner, FaExclamationCircle, FaSearch } from "react-icons/fa";
+import "../pages/styles/ChatList.css";
 
 const ChatList = ({
   chats,
@@ -28,195 +12,85 @@ const ChatList = ({
   onChatSelect,
   onRetry,
   onFindFriend,
-  uid,
+  uid
 }) => {
-  if (isLoading) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-        <CircularProgress color="primary" />
-      </Box>
-    );
-  }
+  
+  // Render trạng thái trống
+  const renderEmptyState = () => (
+    <div className="chat-list-empty-state">
+      <FaCommentSlash className="empty-icon" />
+      <h3>Chưa có cuộc trò chuyện nào</h3>
+      <p>Bắt đầu trò chuyện với bạn bè hoặc tạo nhóm chat mới</p>
+      <button className="find-friend-button" onClick={onFindFriend}>
+        <FaSearch /> Tìm bạn bè
+      </button>
+    </div>
+  );
+  
+  // Render trạng thái đang tải
+  const renderLoadingState = () => (
+    <div className="chat-list-loading-state">
+      <div className="loading-spinner">
+      </div>
+      <p>Đang tải danh sách chat...</p>
+    </div>
+  );
+  
+  // Render trạng thái lỗi
+  const renderErrorState = () => (
+    <div className="chat-list-error-state">
+      <FaExclamationCircle className="error-icon" />
+      <h3>Không thể tải danh sách chat</h3>
+      <p>{error || "Đã có lỗi xảy ra khi tải danh sách chat"}</p>
+      <button className="retry-button" onClick={onRetry}>
+        Thử lại
+      </button>
+    </div>
+  );
 
-  if (error) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          py: 4,
-        }}
-      >
-        <Typography variant="body1" color="error" sx={{ mb: 2 }}>
-          {error}
-        </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={onRetry}
-        >
-          Thử lại
-        </Button>
-      </Box>
-    );
-  }
-
-  if (!chats || chats.length === 0) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          py: 4,
-        }}
-      >
-        <Typography variant="body1" sx={{ mb: 2 }}>
-          Chưa có cuộc trò chuyện nào
-        </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<SearchIcon />}
-          onClick={onFindFriend}
-        >
-          Tìm bạn bè
-        </Button>
-      </Box>
-    );
-  }
+  // Sắp xếp chat theo thời gian cập nhật gần nhất
+  const sortedChats = [...(chats || [])].sort((a, b) => {
+    const timeA = a.lastUpdated ? 
+      (a.lastUpdated.seconds ? a.lastUpdated.seconds * 1000 : a.lastUpdated) : 0;
+    const timeB = b.lastUpdated ? 
+      (b.lastUpdated.seconds ? b.lastUpdated.seconds * 1000 : b.lastUpdated) : 0;
+    return timeB - timeA;
+  });
 
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        maxHeight: "calc(100vh - 220px)",
-        overflow: "auto",
-        backgroundColor: "background.paper",
-        borderRadius: 2,
-      }}
-    >
-      <List sx={{ p: 0 }}>
-        {chats.map((chat) => {
-          const isActive = currentChat && currentChat.chatId === chat.chatId;
-          const isGroupChat = chat.isGroupChat || false;
-          let displayName = "Đang tải...";
-          let avatarContent = <ChatIcon />;
-          let avatarBgColor = "primary.main";
-          let avatarSrc = null;
-
-          if (isGroupChat) {
-            // Chat nhóm
-            displayName = chat.groupName || "Nhóm không tên";
-            avatarBgColor = "secondary.main";
-            if (chat.avataGroupChatUrl) {
-              avatarSrc = chat.avataGroupChatUrl;
-            } else {
-              avatarContent = <GroupIcon />;
-            }
-          } else {
-            // Chat 1:1
+    <div className="chat-list-container">
+      {isLoading ? (
+        renderLoadingState()
+      ) : error ? (
+        renderErrorState()
+      ) : sortedChats.length === 0 ? (
+        renderEmptyState()
+      ) : (
+        <div className="chat-list-items">
+          {sortedChats.map((chat) => {
             const participant = participantsInfo[chat.chatId];
-            if (participant) {
-              displayName = `${participant.firstName} ${participant.lastName}`;
-              if (participant.avatarUrl) {
-                avatarSrc = participant.avatarUrl;
-              } else {
-                avatarContent = displayName.charAt(0).toUpperCase();
-                avatarBgColor = participant.isDefault ? "grey.400" : "primary.main";
-              }
-            }
-          }
-
-          const lastMessage = chat.lastMessage || "";
-          const lastUpdated = chat.lastUpdated
-            ? new Date(
-                chat.lastUpdated.seconds
-                  ? chat.lastUpdated.seconds * 1000
-                  : chat.lastUpdated
-              ).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "";
-
-          return (
-            <React.Fragment key={chat.chatId}>
-              <ListItem
-                button
-                alignItems="flex-start"
-                onClick={() => onChatSelect(chat)}
-                sx={{
-                  bgcolor: isActive ? "action.selected" : "transparent",
-                  "&:hover": { bgcolor: "action.hover" },
-                  py: 1.5,
-                  px: 2,
+            const isActive = currentChat && currentChat.chatId === chat.chatId;
+            
+            // Tính số tin nhắn chưa đọc
+            const unread = chat.unreadCount ? chat.unreadCount[uid] || 0 : 0;
+            
+            return (
+              <ChatItem
+                key={chat.chatId}
+                chat={{
+                  ...chat,
+                  unread: unread,
+                  lastMessageSeen: chat.lastMessageRead && chat.lastMessageRead[uid]
                 }}
-              >
-                <ListItemAvatar>
-                  <Avatar
-                    src={avatarSrc}
-                    sx={{ bgcolor: avatarSrc ? "transparent" : avatarBgColor }}
-                  >
-                    {avatarSrc ? null : avatarContent}
-                  </Avatar>
-                </ListItemAvatar>
-                <ListItemText
-                  primary={
-                    <Typography
-                      variant="subtitle1"
-                      noWrap
-                      sx={{
-                        fontWeight: chat.unread ? "bold" : "normal",
-                      }}
-                    >
-                      {displayName}
-                    </Typography>
-                  }
-                  secondary={
-                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{
-                          display: "inline",
-                          maxWidth: "70%",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          fontWeight: chat.unread ? "medium" : "normal",
-                        }}
-                      >
-                        {lastMessage}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {lastUpdated}
-                      </Typography>
-                    </Box>
-                  }
-                />
-                {chat.unread && (
-                  <Box
-                    sx={{
-                      width: 10,
-                      height: 10,
-                      bgcolor: "primary.main",
-                      borderRadius: "50%",
-                      ml: 1,
-                      mt: 2,
-                    }}
-                  />
-                )}
-              </ListItem>
-              <Divider component="li" />
-            </React.Fragment>
-          );
-        })}
-      </List>
-    </Paper>
+                participant={participant}
+                isActive={isActive}
+                onSelect={onChatSelect}
+              />
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 };
 

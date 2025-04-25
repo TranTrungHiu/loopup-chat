@@ -1,0 +1,208 @@
+/* ChatList.css - Định dạng danh sách chat */
+
+.chat-list-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2px 0;
+  background-color: #f8f9fa;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+/* Thanh cuộn tùy chỉnh */
+.chat-list-container::-webkit-scrollbar {
+  width: 5px;
+}
+
+.chat-list-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+.chat-list-container::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.chat-list-items {
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Trạng thái trống */
+.chat-list-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 30px 20px;
+  text-align: center;
+  color: #5f6368;
+}
+
+.empty-icon {
+  font-size: 40px;
+  color: #9aa0a6;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.chat-list-empty-state h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #202124;
+}
+
+.chat-list-empty-state p {
+  margin: 0 0 20px;
+  font-size: 14px;
+}
+
+.find-friend-button {
+  background-color: #4285f4;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.find-friend-button:hover {
+  background-color: #3367d6;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+}
+
+.find-friend-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Trạng thái đang tải */
+.chat-list-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 30px 20px;
+  color: #5f6368;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.loading-spinner {
+  margin-bottom: 12px;
+  animation: spin 1.2s linear infinite;
+  color: #4285f4;
+  font-size: 30px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.chat-list-loading-state p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Trạng thái lỗi */
+.chat-list-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 30px 20px;
+  text-align: center;
+  color: #5f6368;
+}
+
+.error-icon {
+  font-size: 40px;
+  color: #ea4335;
+  margin-bottom: 16px;
+}
+
+.chat-list-error-state h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #202124;
+}
+
+.chat-list-error-state p {
+  margin: 0 0 20px;
+  font-size: 14px;
+}
+
+.retry-button {
+  background-color: #ea4335;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.retry-button:hover {
+  background-color: #d93025;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+}
+
+.retry-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Hiệu ứng khi có tin nhắn mới */
+@keyframes newChatPulse {
+  0% { background-color: rgba(66, 133, 244, 0.1); }
+  50% { background-color: rgba(66, 133, 244, 0.2); }
+  100% { background-color: rgba(66, 133, 244, 0.1); }
+}
+
+.new-chat-animation {
+  animation: newChatPulse 2s ease;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .chat-list-empty-state .empty-icon,
+  .chat-list-error-state .error-icon {
+    font-size: 30px;
+    margin-bottom: 12px;
+  }
+  
+  .chat-list-empty-state h3,
+  .chat-list-error-state h3 {
+    font-size: 15px;
+  }
+  
+  .chat-list-empty-state p,
+  .chat-list-error-state p,
+  .chat-list-loading-state p {
+    font-size: 13px;
+  }
+}
