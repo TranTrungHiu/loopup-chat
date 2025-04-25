@@ -24,6 +24,9 @@ import {
   Chat as ChatIcon,
   Person as PersonIcon
 } from '@mui/icons-material';
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import "./styles/Toast.css";
 
 const FindFriendModal = ({ isOpen, onClose, uid, token }) => {
   const [searchEmail, setSearchEmail] = useState('');
@@ -133,14 +136,51 @@ const FindFriendModal = ({ isOpen, onClose, uid, token }) => {
       if (!res.ok) {
         const errorMessage = await res.text();
         console.error("Lỗi gửi lời mời kết bạn:", errorMessage);
-        alert(errorMessage);
+        toast.error(errorMessage, {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "colored"
+        });
         return;
       }
 
       setIsFriend("pending");
-      alert("Lời mời kết bạn đã được gửi.");
+      toast.success(
+        <div className="custom-toast">
+          <PersonAddIcon className="toast-icon" />
+          <div className="toast-message">
+            <strong>Thành công!</strong><br />
+            Đã gửi lời mời kết bạn đến {foundUser.firstName} {foundUser.lastName}
+          </div>
+        </div>,
+        {
+          position: "top-right",
+          autoClose: 4000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "colored"
+        }
+      );
     } catch (err) {
       console.error("Lỗi gửi lời mời kết bạn:", err);
+      toast.error("Không thể gửi lời mời kết bạn. Vui lòng thử lại sau.", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -171,7 +211,16 @@ const FindFriendModal = ({ isOpen, onClose, uid, token }) => {
 
     } catch (err) {
       console.error("Lỗi khi bắt đầu cuộc trò chuyện:", err);
-      alert("Không thể bắt đầu cuộc trò chuyện, vui lòng thử lại sau.");
+      toast.error("Không thể bắt đầu cuộc trò chuyện, vui lòng thử lại sau.", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -343,6 +392,7 @@ const FindFriendModal = ({ isOpen, onClose, uid, token }) => {
           Đóng
         </Button>
       </DialogActions>
+      <ToastContainer />
     </Dialog>
   );
 };

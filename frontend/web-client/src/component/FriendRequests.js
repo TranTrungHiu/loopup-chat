@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "../pages/styles/FriendRequests.css"; // Đường dẫn đến file CSS của bạn
-import {FaSyncAlt } from "react-icons/fa";
+import { FaSyncAlt, FaUserCheck, FaUserTimes, FaBell } from "react-icons/fa";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import "./styles/Toast.css";
+
 const FriendRequests = ({ uid, token }) => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -43,6 +47,16 @@ const FriendRequests = ({ uid, token }) => {
     } catch (err) {
       console.error("Lỗi khi lấy lời mời kết bạn:", err);
       setError("Không thể tải danh sách lời mời kết bạn");
+      toast.error("Không thể tải danh sách lời mời kết bạn", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored"
+      });
     } finally {
       setLoading(false);
     }
@@ -54,7 +68,7 @@ const FriendRequests = ({ uid, token }) => {
   }, [fetchRequests]);
   
   // Xử lý chấp nhận lời mời kết bạn
-  const handleAccept = async (requestId) => {
+  const handleAccept = async (requestId, userName) => {
     try {
       const response = await fetch(
         `http://localhost:8080/api/friends/accept/${requestId}`,
@@ -73,16 +87,43 @@ const FriendRequests = ({ uid, token }) => {
       // Cập nhật lại danh sách sau khi chấp nhận
       setRequests(prev => prev.filter(req => req.id !== requestId));
       
-      // Thông báo thành công (có thể bỏ qua)
-      alert("Đã chấp nhận lời mời kết bạn!");
+      // Thông báo thành công với toast
+      toast.success(
+        <div className="custom-toast">
+          <FaUserCheck className="toast-icon" />
+          <div className="toast-message">
+            <strong>Thành công!</strong><br />
+            Bạn và {userName} đã trở thành bạn bè
+          </div>
+        </div>,
+        {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "colored"
+        }
+      );
     } catch (err) {
       console.error("Lỗi khi chấp nhận lời mời:", err);
-      alert("Không thể chấp nhận lời mời kết bạn. Vui lòng thử lại sau.");
+      toast.error("Không thể chấp nhận lời mời kết bạn. Vui lòng thử lại sau.", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored"
+      });
     }
   };
   
   // Xử lý từ chối lời mời kết bạn
-  const handleReject = async (requestId) => {
+  const handleReject = async (requestId, userName) => {
     try {
       const response = await fetch(
         `http://localhost:8080/api/friends/reject/${requestId}`,
@@ -100,18 +141,50 @@ const FriendRequests = ({ uid, token }) => {
       
       // Cập nhật lại danh sách sau khi từ chối
       setRequests(prev => prev.filter(req => req.id !== requestId));
+      
+      // Thông báo đã từ chối thành công
+      toast.info(
+        <div className="custom-toast">
+          <FaUserTimes className="toast-icon" />
+          <div className="toast-message">
+            Đã từ chối lời mời kết bạn từ {userName}
+          </div>
+        </div>,
+        {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "colored"
+        }
+      );
     } catch (err) {
       console.error("Lỗi khi từ chối lời mời:", err);
-      alert("Không thể từ chối lời mời kết bạn. Vui lòng thử lại sau.");
+      toast.error("Không thể từ chối lời mời kết bạn. Vui lòng thử lại sau.", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored"
+      });
     }
   };
   
   return (
     <div className="friend-requests-container">
-      <h2>Lời mời kết bạn</h2>
+      <h2>
+        <FaBell className="request-icon" />
+        Lời mời kết bạn
+      </h2>
       
       <button className="refresh-requests" onClick={fetchRequests} disabled={loading}>
-        {loading ? "⏳" :  <FaSyncAlt làm mới/>}
+        {loading ? "⏳" : <FaSyncAlt />}
       </button>
       
       {loading ? (
@@ -150,13 +223,19 @@ const FriendRequests = ({ uid, token }) => {
               <div className="request-actions">
                 <button 
                   className="accept-button"
-                  onClick={() => handleAccept(request.id)}
+                  onClick={() => handleAccept(
+                    request.id, 
+                    `${request.fromUser.firstName} ${request.fromUser.lastName}`
+                  )}
                 >
                   Đồng ý
                 </button>
                 <button 
                   className="reject-button"
-                  onClick={() => handleReject(request.id)}
+                  onClick={() => handleReject(
+                    request.id,
+                    `${request.fromUser.firstName} ${request.fromUser.lastName}`
+                  )}
                 >
                   Từ chối
                 </button>
@@ -169,6 +248,7 @@ const FriendRequests = ({ uid, token }) => {
           <p>Không có lời mời kết bạn nào.</p>
         </div>
       )}
+      <ToastContainer />
     </div>
   );
 };
@@ -189,8 +269,6 @@ function formatRequestTime(createdAt) {
   if (diff < 31536000) return `${Math.floor(diff / 2592000)} tháng trước`;
   return `${Math.floor(diff / 31536000)} năm trước`;
 }
-
-
 
 function getInitials(firstName, lastName) {
   const firstInitial = firstName ? firstName.charAt(0) : '';
