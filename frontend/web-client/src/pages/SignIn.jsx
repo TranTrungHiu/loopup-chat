@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
+import styles from "./styles/SignIn.module.css";
 // Material-UI imports
 import {
   Container,
@@ -98,56 +99,33 @@ const SignIn = () => {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box
-        sx={{
-          mt: 8,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-        }}
-      >
-        <Paper
-          elevation={3}
-          sx={{
-            p: 4,
-            width: "100%",
-            borderRadius: 2,
-            background: "rgba(255, 255, 255, 0.9)",
-          }}
-        >
+    <div className={styles.loginContainer}>
+      <Container maxWidth="sm">
+        <Paper elevation={3} className={styles.paperContainer}>
           <Box
             sx={{
-              mb: 3,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
             }}
           >
-            <Typography
-              component="h1"
-              variant="h4"
-              sx={{
-                fontWeight: "bold",
-                color: "primary.main",
-                mb: 1,
-              }}
-            >
+            <Typography component="h1" variant="h4" className={styles.title}>
               LOOPUP
             </Typography>
-            <Typography component="h2" variant="h6">
-              Đăng nhập
+            <Typography component="h2" variant="h6" className={styles.subtitle}>
+              LOGIN
             </Typography>
           </Box>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mt: 3, mb: 2 }}>
               {error}
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSignIn} sx={{ mt: 1 }}>
+          <Box component="form" onSubmit={handleSignIn} sx={{ mt: 3 }}>
             <TextField
+              className={styles.inputField}
               margin="normal"
               required
               fullWidth
@@ -161,13 +139,14 @@ const SignIn = () => {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <EmailIcon color="primary" />
+                    <EmailIcon className={styles.inputIcon} />
                   </InputAdornment>
                 ),
               }}
             />
 
             <TextField
+              className={styles.inputField}
               margin="normal"
               required
               fullWidth
@@ -181,7 +160,7 @@ const SignIn = () => {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <LockIcon color="primary" />
+                    <LockIcon className={styles.inputIcon} />
                   </InputAdornment>
                 ),
                 endAdornment: (
@@ -190,11 +169,14 @@ const SignIn = () => {
                       aria-label="toggle password visibility"
                       onClick={handleTogglePasswordVisibility}
                       edge="end"
+                      className={styles.eyeButton}
                     >
                       {showPassword ? (
-                        <VisibilityOffIcon />
+                        <VisibilityOffIcon
+                          className={`${styles.eyeIcon} ${styles.eyeIconShowing}`}
+                        />
                       ) : (
-                        <VisibilityIcon />
+                        <VisibilityIcon className={styles.eyeIcon} />
                       )}
                     </IconButton>
                   </InputAdornment>
@@ -206,8 +188,9 @@ const SignIn = () => {
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2, py: 1.5, fontSize: "1rem" }}
+              className={styles.loginButton}
               disabled={loading}
+              sx={{ mt: 4, mb: 3 }}
             >
               {loading ? (
                 <CircularProgress size={24} color="inherit" />
@@ -216,12 +199,9 @@ const SignIn = () => {
               )}
             </Button>
 
-            <Grid container justifyContent="flex-end">
+            <Grid container justifyContent="center">
               <Grid item>
-                <Link
-                  to="/signup"
-                  style={{ color: "#6b59cc", textDecoration: "none" }}
-                >
+                <Link to="/signup" className={styles.signupLink}>
                   <Typography variant="body2">
                     Chưa có tài khoản? Đăng ký ngay
                   </Typography>
@@ -230,8 +210,8 @@ const SignIn = () => {
             </Grid>
           </Box>
         </Paper>
-      </Box>
-    </Container>
+      </Container>
+    </div>
   );
 };
 

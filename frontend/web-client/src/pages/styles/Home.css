@@ -1050,62 +1050,174 @@
     transform: translateY(-50%);
     outline: none;
     z-index: 1001;
+
+/* Thêm vào cuối file - Style cho trạng thái tin nhắn */
+
+/* Container cho trạng thái tin nhắn */
+.message-status {
+  display: inline-flex;
+  margin-left: 4px;
+  align-items: center;
+}
+
+/* Style cho icon trạng thái "Đã gửi" */
+.sent-status .status-icon {
+  color: #a0a0a0;
+  font-size: 10px;
+}
+
+/* Style cho icon trạng thái "Đã đọc" */
+.read-status {
+  position: relative;
+}
+
+.read-status .status-icon.double {
+  color: #3578E5; /* Màu xanh Facebook */
+  font-size: 10px;
+}
+
+.read-status .status-icon.overlay {
+  position: absolute;
+  left: 0;
+  opacity: 0.5;
+  transform: translateX(-3px);
+}
+
+/* Thêm space cho vùng hiển thị thời gian và trạng thái */
+.message-time {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  color: #888;
+  margin-top: 2px;
+}
+
+/* Thêm cho container tin nhắn */
+.message {
+  position: relative;
+  max-width: 70%;
+  margin-bottom: 10px;
+}
+
+.message .msg {
+  padding: 8px 12px;
+  border-radius: 18px;
+  word-wrap: break-word;
+  position: relative;
+}
+
+/* Tin nhắn của chính người dùng */
+.message.right {
+  align-self: flex-end;
+}
+
+.message.right .msg {
+  background-color: #0084ff;
+  color: white;
+}
+
+/* Tin nhắn từ người khác */
+.message.left {
+  align-self: flex-start;
+}
+
+.message.left .msg {
+  background-color: #e4e6eb;
+  color: black;
+}
+
+/* Loading messages animation */
+.loading-messages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 20px;
+}
+
+.loading-messages p {
+  margin-top: 15px;
+  color: #777;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+/* Loading animation dots */
+.loading-messages::after {
+  content: "";
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #1e014e;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Message appear animation */
+.message {
+  animation: messageAppear 0.3s ease-out;
+  transition: all 0.3s ease;
+}
+
+@keyframes messageAppear {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
-  
-  .incoming-call-modal .modal-content {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    text-align: center;
-    max-width: 350px;
-    width: 100%;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-  
-  .incoming-call-modal .caller-avatar {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    margin: 0 auto 16px;
-    border: 2px solid #ddd;
+}
+
+/* Fade in for messages when loaded */
+.chat-content > div {
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
   }
-  
-  .incoming-call-modal .caller-name {
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 16px;
-    color: #333;
+  to {
+    opacity: 1;
   }
-  
-  .incoming-call-modal .button-group {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-  }
-  
-  .incoming-call-modal .accept-btn,
-  .incoming-call-modal .reject-btn {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    color: white;
-    font-size: 14px;
-    transition: background 0.3s;
-  }
-  
-  .incoming-call-modal .accept-btn {
-    background: #28a745;
-  }
-  
-  .incoming-call-modal .accept-btn:hover {
-    background: #218838;
-  }
-  
-  .incoming-call-modal .reject-btn {
-    background: #dc3545;
-  }
-  
-  .incoming-call-modal .reject-btn:hover {
-    background: #c82333;
-  }
+}
+
+/* Smooth transition for message state changes */
+.message.pending, .message.error, .message .status-indicator {
+  transition: all 0.3s ease;
+}
+
+/* Empty state styling */
+.no-messages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #777;
+  text-align: center;
+  animation: fadeIn 0.5s ease;
+}
+
+.no-messages p:first-child {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.no-messages p:last-child {
+  font-size: 14px;
+  color: #999;
+}

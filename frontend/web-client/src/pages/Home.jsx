@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import "./styles/Home.css";
+import Toast, { showToast } from "../component/Toast";
+import { toast, ToastContainer, Zoom } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import EmojiPicker from "emoji-picker-react";
 import {
   Button,
   IconButton,
@@ -21,22 +22,9 @@ import {
   createTheme,
 } from "@mui/material";
 import {
-  Settings as SettingsIcon,
-  Search as SearchIcon,
-  Send as SendIcon,
-  PersonAdd as PersonAddIcon,
-  Group as GroupIcon,
-  Refresh as RefreshIcon,
-  Chat as ChatIcon,
-  People as PeopleIcon,
-  Person as PersonIcon,
-  ExitToApp as LogoutIcon,
-} from "@mui/icons-material";
-import {
   FaCog,
   FaUserPlus,
   FaUsers,
-  FaSync,
   FaVideo,
   FaInfoCircle,
   FaSyncAlt,
@@ -49,9 +37,15 @@ import {
   FaFileAlt,
   FaSmile,
   FaImage,
+  FaPhoneAlt,
+  FaBell,
+  FaTimes,
+  FaCheck,
+  FaEnvelope,
 } from "react-icons/fa";
-import { BsSendFill } from "react-icons/bs";
-import { BiSearch } from "react-icons/bi";
+import { BsSendFill, BsChatDots, BsPersonPlus } from "react-icons/bs";
+import { BiSearch, BiMessageRounded } from "react-icons/bi";
+import { MdVideoCall, MdOutlineInfo } from "react-icons/md";
 import Modal from "react-modal";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
@@ -68,7 +62,18 @@ import {
   fetchMessages,
   fetchParticipantInfo,
   sendMessage,
+  markMessageAsRead,
 } from "../services/chatService";
+import {
+  connectSocket,
+  disconnectSocket,
+  joinChatRoom,
+  leaveChatRoom,
+  onNewMessage,
+  onChatUpdated,
+  onMessageRead,
+  emitMessageRead,
+} from "../services/socketService";
 import ChatList from "../component/ChatList";
 import { formatDistanceToNow, format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -214,9 +219,13 @@ const Home = () => {
       audio.play().catch((err) => {
         console.error("Audio playback error:", err);
         if (err.name === "NotSupportedError") {
-          console.error("File format not supported or file not found. Ensure /mp3/ringtone.mp3 exists in public folder.");
+          console.error(
+            "File format not supported or file not found. Ensure /mp3/ringtone.mp3 exists in public folder."
+          );
         } else if (err.name === "NotAllowedError") {
-          console.error("Autoplay blocked. User interaction may be required before playing audio.");
+          console.error(
+            "Autoplay blocked. User interaction may be required before playing audio."
+          );
         }
       });
     }
@@ -340,7 +349,10 @@ const Home = () => {
               participantMap[chat.chatId] = info;
             }
           } catch (err) {
-            console.error(`Error getting participant for chat ${chat.chatId}:`, err);
+            console.error(
+              `Error getting participant for chat ${chat.chatId}:`,
+              err
+            );
           }
         }
         setParticipantsInfo(participantMap);
@@ -448,14 +460,15 @@ const Home = () => {
 
       if (!res.ok) {
         const errorMessage = await res.text();
-        alert(errorMessage);
+        showToast("error", errorMessage);
         return;
       }
 
       setIsFriend("pending");
-      alert("Lời mời kết bạn đã được gửi.");
+      showToast("success", "Lời mời kết bạn đã được gửi");
     } catch (err) {
       console.error("Lỗi gửi lời mời kết bạn:", err);
+      showToast("error", "Không thể gửi lời mời kết bạn, vui lòng thử lại sau");
     }
   };
 
@@ -484,9 +497,16 @@ const Home = () => {
       setCurrentParticipant(friend);
       setShowFriends(false);
       loadMessages(chatData.chatId);
+      showToast(
+        "success",
+        `Bắt đầu cuộc trò chuyện với ${friend.firstName} ${friend.lastName}`
+      );
     } catch (err) {
       console.error("Lỗi khi bắt đầu cuộc trò chuyện:", err);
-      alert("Không thể bắt đầu cuộc trò chuyện, vui lòng thử lại sau.");
+      showToast(
+        "error",
+        "Không thể bắt đầu cuộc trò chuyện, vui lòng thử lại sau"
+      );
     }
   };
 
@@ -515,9 +535,16 @@ const Home = () => {
       setCurrentParticipant(friend);
       loadMessages(chatData.chatId);
       loadChats();
+      showToast(
+        "success",
+        `Bắt đầu cuộc trò chuyện với ${friend.firstName} ${friend.lastName}`
+      );
     } catch (err) {
       console.error("Lỗi khi bắt đầu cuộc trò chuyện:", err);
-      alert("Không thể bắt đầu cuộc trò chuyện, vui lòng thử lại sau.");
+      showToast(
+        "error",
+        "Không thể bắt đầu cuộc trò chuyện, vui lòng thử lại sau"
+      );
     }
   };
 
@@ -528,6 +555,14 @@ const Home = () => {
     try {
       const messagesData = await fetchMessages(chatId, token);
       setMessages(Array.isArray(messagesData) ? messagesData : []);
+
+      // Theo dõi tin nhắn chưa đọc
+      unreadMessagesRef.current = messagesData.filter(
+        (msg) => msg.sender !== uid && (!msg.readBy || !msg.readBy[uid])
+      );
+
+      // Cuộn xuống tin nhắn cuối cùng NGAY LẬP TỨC sau khi tải tin nhắn
+      setTimeout(() => scrollToBottom(true), 100);
     } catch (err) {
       console.error("Lỗi khi tải tin nhắn:", err);
       setMessageError("Không thể tải tin nhắn");
@@ -536,39 +571,26 @@ const Home = () => {
     }
   };
 
+  // Xử lý gửi tin nhắn dựa hoàn toàn vào Socket.IO real-time
   const handleSendMessage = async () => {
     try {
       if (!currentChat || !newMessage.trim()) return;
 
       const trimmedMessage = newMessage.trim();
-      const tempMessage = {
-        id: `temp-${Date.now()}`,
-        sender: uid,
-        message: trimmedMessage,
-        timestamp: new Date(),
-        pending: true,
-      };
+      setNewMessage(""); // Xóa tin nhắn trong input ngay lập tức
 
-      setMessages((prevMessages) => [...prevMessages, tempMessage]);
-      setNewMessage("");
+      // Đặt shouldScrollToBottomRef thành true để đảm bảo cuộn xuống dưới khi tin nhắn mới đến
+      shouldScrollToBottomRef.current = true;
 
-      const response = await sendMessage(
-        currentChat.chatId,
-        uid,
-        trimmedMessage,
-        token
-      );
+      // Gửi tin nhắn qua API mà không tạo tin nhắn tạm thời
+      // Socket.IO sẽ nhận và xử lý tin nhắn sau khi nó được lưu vào cơ sở dữ liệu
+      await sendMessage(currentChat.chatId, uid, trimmedMessage, token);
 
-      loadMessages(currentChat.chatId);
-      loadChats();
+      // Không cần thêm tin nhắn vào state vì socket sẽ nhận được tin nhắn và cập nhật UI
+      console.log("Tin nhắn đã được gửi, đang chờ phản hồi từ socket...");
     } catch (err) {
       console.error("Lỗi khi gửi tin nhắn:", err);
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) =>
-          msg.pending ? { ...msg, error: true, pending: false } : msg
-        )
-      );
-      alert("Không thể gửi tin nhắn, vui lòng thử lại.");
+      showToast("error", "Không thể gửi tin nhắn, vui lòng thử lại");
     }
   };
 
@@ -576,9 +598,67 @@ const Home = () => {
     async (chat) => {
       setCurrentChat(chat);
 
+      // Đặt cờ shouldScrollToBottomRef thành true để đảm bảo sẽ cuộn xuống cuối cùng
+      shouldScrollToBottomRef.current = true;
+
       if (participantsInfo[chat.chatId]) {
         setCurrentParticipant(participantsInfo[chat.chatId]);
-        loadMessages(chat.chatId);
+
+        // Tải tin nhắn trước
+        const messagesData = await fetchMessages(chat.chatId, token);
+
+        // Đánh dấu tất cả tin nhắn chưa đọc là đã đọc ngay khi chọn chat
+        if (Array.isArray(messagesData)) {
+          const unreadMessages = messagesData.filter(
+            (msg) => msg.sender !== uid && (!msg.readBy || !msg.readBy[uid])
+          );
+
+          console.log(
+            `Tự động đánh dấu ${unreadMessages.length} tin nhắn đã đọc khi chọn chat ${chat.chatId}`
+          );
+
+          // Cập nhật UI trước để tăng trải nghiệm người dùng
+          setMessages(
+            messagesData.map((msg) => {
+              if (msg.sender !== uid && (!msg.readBy || !msg.readBy[uid])) {
+                return {
+                  ...msg,
+                  readBy: {
+                    ...(msg.readBy || {}),
+                    [uid]: new Date().toISOString(),
+                  },
+                };
+              }
+              return msg;
+            })
+          );
+
+          // Đánh dấu từng tin nhắn là đã đọc
+          unreadMessages.forEach((msg) => {
+            if (msg.id) {
+              // 1. Gửi sự kiện Socket.IO trực tiếp ngay lập tức để đảm bảo real-time
+              emitMessageRead(msg.id, uid, chat.chatId);
+
+              // 2. Lưu trạng thái vào cơ sở dữ liệu
+              markMessageAsRead(msg.id, uid, token)
+                .then(() => {
+                  console.log(
+                    `Tin nhắn ${msg.id} được đánh dấu đã đọc khi chọn chat`
+                  );
+                })
+                .catch((err) => {
+                  console.error(
+                    `Lỗi khi đánh dấu tin nhắn ${msg.id} đã đọc:`,
+                    err
+                  );
+                });
+            }
+          });
+        } else {
+          // Nếu không có tin nhắn hoặc lỗi, vẫn hiển thị danh sách rỗng
+          setMessages([]);
+        }
+
         return;
       }
 
@@ -614,7 +694,7 @@ const Home = () => {
         });
       }
     },
-    [participantsInfo, uid]
+    [participantsInfo, uid, token]
   );
 
   const handleStartChatFromSearch = async (otherUser) => {
@@ -641,17 +721,26 @@ const Home = () => {
       setCurrentChat(chatData);
       setCurrentParticipant(otherUser);
       loadMessages(chatData.chatId);
+      showToast(
+        "success",
+        `Bắt đầu cuộc trò chuyện với ${otherUser.firstName} ${otherUser.lastName}`
+      );
     } catch (error) {
       console.error("Lỗi khi bắt đầu cuộc trò chuyện:", error);
-      alert("Không thể bắt đầu cuộc trò chuyện. Vui lòng thử lại sau.");
+      showToast(
+        "error",
+        "Không thể bắt đầu cuộc trò chuyện, vui lòng thử lại sau"
+      );
     }
   };
 
   // Video call logic
   useEffect(() => {
     const connectWebSocket = () => {
-      socket.current = new WebSocket(`ws://localhost:8080/ws/video?userId=${uid}`);
-      
+      socket.current = new WebSocket(
+        `ws://localhost:8080/ws/video?userId=${uid}`
+      );
+
       socket.current.onopen = () => {
         console.log("WebSocket connected for user:", uid);
         while (pendingCandidates.current.length > 0) {
@@ -710,20 +799,25 @@ const Home = () => {
   const handleStartVideoCall = async () => {
     console.log("Starting video call to:", currentParticipant);
     if (!currentParticipant?.uid) {
-      alert("Vui lòng chọn người dùng để gọi video.");
+      showToast("warning", "Vui lòng chọn người dùng để gọi video");
       return;
     }
 
     try {
       await waitForWebSocket();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      }).catch((err) => {
-        console.error("Media access error:", err);
-        alert("Không thể truy cập camera hoặc micro. Vui lòng kiểm tra quyền.");
-        throw err;
-      });
+      const stream = await navigator.mediaDevices
+        .getUserMedia({
+          video: true,
+          audio: true,
+        })
+        .catch((err) => {
+          console.error("Media access error:", err);
+          showToast(
+            "error",
+            "Không thể truy cập camera hoặc micro. Vui lòng kiểm tra quyền"
+          );
+          throw err;
+        });
       setLocalStream(stream);
 
       if (peerConnection.current) {
@@ -731,9 +825,9 @@ const Home = () => {
       }
       peerConnection.current = new RTCPeerConnection({ iceServers });
 
-      stream.getTracks().forEach((track) =>
-        peerConnection.current.addTrack(track, stream)
-      );
+      stream
+        .getTracks()
+        .forEach((track) => peerConnection.current.addTrack(track, stream));
 
       peerConnection.current.onicecandidate = (event) => {
         if (event.candidate) {
@@ -771,7 +865,7 @@ const Home = () => {
       setIsVideoCall(true);
     } catch (error) {
       console.error("Lỗi khi bắt đầu cuộc gọi video:", error);
-      alert("Không thể bắt đầu cuộc gọi video: " + error.message);
+      showToast("error", "Không thể bắt đầu cuộc gọi video: " + error.message);
       handleEndCall();
     }
   };
@@ -785,13 +879,18 @@ const Home = () => {
 
     try {
       // Fetch caller info
-      const response = await fetch(`http://localhost:8080/api/user/profile/${data.from}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        `http://localhost:8080/api/user/profile/${data.from}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       if (!response.ok) {
-        throw new Error(`Không thể lấy thông tin người gọi: ${response.status}`);
+        throw new Error(
+          `Không thể lấy thông tin người gọi: ${response.status}`
+        );
       }
       const callerInfo = await response.json();
       console.log("Caller info:", callerInfo);
@@ -814,14 +913,19 @@ const Home = () => {
     if (!incomingCall) return;
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      }).catch((err) => {
-        console.error("Media access error:", err);
-        alert("Không thể truy cập camera hoặc micro. Vui lòng kiểm tra quyền.");
-        throw err;
-      });
+      const stream = await navigator.mediaDevices
+        .getUserMedia({
+          video: true,
+          audio: true,
+        })
+        .catch((err) => {
+          console.error("Media access error:", err);
+          showToast(
+            "error",
+            "Không thể truy cập camera hoặc micro. Vui lòng kiểm tra quyền."
+          );
+          throw err;
+        });
       setLocalStream(stream);
 
       if (peerConnection.current) {
@@ -829,9 +933,9 @@ const Home = () => {
       }
       peerConnection.current = new RTCPeerConnection({ iceServers });
 
-      stream.getTracks().forEach((track) =>
-        peerConnection.current.addTrack(track, stream)
-      );
+      stream
+        .getTracks()
+        .forEach((track) => peerConnection.current.addTrack(track, stream));
 
       peerConnection.current.onicecandidate = (event) => {
         if (event.candidate) {
@@ -871,24 +975,17 @@ const Home = () => {
 
       setIsVideoCall(true);
       setIncomingCall(null);
+      showToast("success", "Đã kết nối cuộc gọi video");
     } catch (error) {
       console.error("Lỗi khi nhận offer:", error);
-      alert("Lỗi khi nhận cuộc gọi video: " + error.message);
+      showToast("error", "Lỗi khi xử lý trả lời cuộc gọi: " + error.message);
       handleEndCall();
     }
   };
 
-  const handleRejectCall = () => {
-    if (incomingCall) {
-      socket.current.send(
-        JSON.stringify({
-          type: "call-rejected",
-          to: incomingCall.from,
-          from: uid,
-        })
-      );
-    }
-    setIncomingCall(null);
+  const handleCallRejected = (data) => {
+    showToast("info", "Cuộc gọi bị từ chối bởi người nhận");
+    handleEndCall();
   };
 
   const handleReceiveAnswer = async (data) => {
@@ -901,9 +998,10 @@ const Home = () => {
       await peerConnection.current.setRemoteDescription(
         new RTCSessionDescription(data.sdp)
       );
+      showToast("success", "Đã kết nối cuộc gọi video");
     } catch (error) {
       console.error("Lỗi khi nhận answer:", error);
-      alert("Lỗi khi xử lý trả lời cuộc gọi: " + error.message);
+      showToast("error", "Lỗi khi xử lý trả lời cuộc gọi: " + error.message);
     }
   };
 
@@ -922,9 +1020,28 @@ const Home = () => {
     }
   };
 
-  const handleCallRejected = (data) => {
-    alert("Cuộc gọi bị từ chối bởi người nhận.");
-    handleEndCall();
+  const handleRejectCall = () => {
+    if (incomingCall) {
+      // Gửi thông báo từ chối cuộc gọi đến người gọi
+      socket.current.send(
+        JSON.stringify({
+          type: "call-rejected",
+          to: incomingCall.from,
+          from: uid,
+        })
+      );
+
+      // Đóng cửa sổ cuộc gọi đến
+      setIncomingCall(null);
+
+      // Dừng âm thanh chuông nếu đang phát
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+
+      showToast("info", "Bạn đã từ chối cuộc gọi");
+    }
   };
 
   const handleEndCall = () => {
@@ -947,6 +1064,255 @@ const Home = () => {
       audio.currentTime = 0;
     }
   };
+
+  // Kết nối Socket.IO khi component được mount
+  useEffect(() => {
+    if (!uid) return;
+
+    // Kết nối với socket server
+    const socket = connectSocket(uid);
+
+    // Đăng ký các sự kiện socket
+    const newMessageUnsub = onNewMessage((message) => {
+      console.log("New message received:", message);
+
+      // Nếu tin nhắn thuộc cuộc trò chuyện hiện tại, thêm vào danh sách tin nhắn
+      if (currentChat && message.chatId === currentChat.chatId) {
+        setMessages((prev) => [
+          ...prev.filter((m) => m.id !== message.id),
+          message,
+        ]);
+
+        // Đánh dấu là tin nhắn đã đọc nếu không phải từ người dùng hiện tại
+        // và người dùng đang xem cửa sổ chat này
+        if (
+          message.sender !== uid &&
+          message.id &&
+          document.visibilityState === "visible"
+        ) {
+          console.log(
+            `Tự động đánh dấu tin nhắn mới ${message.id} là đã đọc vì người dùng đang mở chat`
+          );
+
+          // 1. Gửi sự kiện Socket.IO trực tiếp để người gửi thấy tin nhắn đã được đọc ngay lập tức
+          emitMessageRead(message.id, uid, currentChat.chatId);
+
+          // 2. Lưu vào database
+          markMessageAsRead(message.id, uid, token)
+            .then(() => {
+              console.log("Tin nhắn mới tự động được đánh dấu đã đọc");
+
+              // 3. Cập nhật UI để hiển thị trạng thái đã đọc
+              setMessages((prevMessages) =>
+                prevMessages.map((msg) =>
+                  msg.id === message.id
+                    ? {
+                        ...msg,
+                        readBy: {
+                          ...(msg.readBy || {}),
+                          [uid]: new Date().toISOString(),
+                        },
+                      }
+                    : msg
+                )
+              );
+            })
+            .catch((err) =>
+              console.error("Error marking new message as read:", err)
+            );
+        }
+
+        // Cuộn xuống để hiện thị tin nhắn mới
+        setTimeout(scrollToBottom, 100);
+      }
+
+      // Cập nhật danh sách chat
+      loadChats();
+    });
+
+    // Xử lý sự kiện cập nhật chat
+    const chatUpdatedUnsub = onChatUpdated((data) => {
+      console.log("Chat updated:", data);
+      loadChats();
+    });
+
+    // Xử lý sự kiện tin nhắn đã đọc
+    const messageReadUnsub = onMessageRead((data) => {
+      console.log("Message read event received:", data);
+
+      // Kiểm tra dữ liệu hợp lệ
+      if (!data || !data.messageId || !data.userId) {
+        console.error("Invalid message_read event data:", data);
+        return;
+      }
+
+      // Cập nhật trạng thái đọc tin nhắn trong UI ngay lập tức
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) => {
+          if (msg.id === data.messageId) {
+            console.log(
+              `Updating read status for message ${msg.id} by user ${data.userId}`
+            );
+            // Tạo bản sao của đối tượng tin nhắn để không thay đổi trực tiếp state
+            const updatedMsg = { ...msg };
+
+            // Khởi tạo readBy nếu chưa tồn tại
+            if (!updatedMsg.readBy) {
+              updatedMsg.readBy = {};
+            }
+
+            // Thêm hoặc cập nhật thông tin người đọc
+            updatedMsg.readBy[data.userId] =
+              data.timestamp || new Date().toISOString();
+
+            return updatedMsg;
+          }
+          return msg;
+        })
+      );
+    });
+
+    // Cleanup khi component bị hủy
+    return () => {
+      newMessageUnsub();
+      chatUpdatedUnsub();
+      messageReadUnsub();
+      disconnectSocket();
+    };
+  }, [uid, currentChat]);
+
+  // Đánh dấu tin nhắn đã đọc khi người dùng vào hội thoại
+  useEffect(() => {
+    if (!currentChat || !uid || !token) return;
+
+    // Tham gia phòng chat để nhận các tin nhắn mới
+    joinChatRoom(currentChat.chatId);
+
+    // Đánh dấu tất cả tin nhắn chưa đọc là đã đọc
+    const unreadMessages = messages.filter(
+      (msg) => msg.sender !== uid && (!msg.readBy || !msg.readBy[uid])
+    );
+
+    unreadMessages.forEach((msg) => {
+      if (msg.id) {
+        markMessageAsRead(msg.id, uid, token)
+          .then(() => console.log(`Message ${msg.id} marked as read`))
+          .catch((err) =>
+            console.error(`Error marking message ${msg.id} as read:`, err)
+          );
+      }
+    });
+
+    return () => {
+      // Rời khỏi phòng chat khi chuyển sang hội thoại khác
+      if (currentChat) {
+        leaveChatRoom(currentChat.chatId);
+      }
+    };
+  }, [currentChat, messages, uid, token]);
+
+  const messagesEndRef = useRef(null);
+  const messageInputRef = useRef(null);
+  const chatContentRef = useRef(null);
+  const unreadMessagesRef = useRef([]);
+  const shouldScrollToBottomRef = useRef(true);
+
+  // Hàm để cuộn xuống tin nhắn cuối cùng
+  const scrollToBottom = useCallback((immediate = false) => {
+    if (messagesEndRef.current) {
+      try {
+        messagesEndRef.current.scrollIntoView({
+          behavior: immediate ? "auto" : "smooth",
+          block: "end",
+        });
+        console.log(
+          "Đã cuộn xuống tin nhắn cuối cùng",
+          immediate ? "(ngay lập tức)" : "(mượt mà)"
+        );
+      } catch (err) {
+        console.error("Lỗi khi cuộn tin nhắn:", err);
+      }
+    }
+  }, []);
+
+  // Đánh dấu cần cuộn khi tin nhắn thay đổi
+  useEffect(() => {
+    if (shouldScrollToBottomRef.current && messages.length > 0) {
+      scrollToBottom(true);
+      shouldScrollToBottomRef.current = false;
+    }
+  }, [messages, scrollToBottom]);
+
+  // Đánh dấu tất cả tin nhắn chưa đọc là đã đọc khi người dùng nhấn vào ô nhập tin nhắn
+  const handleInputFocus = useCallback(() => {
+    if (!currentChat || !uid || !token) return;
+
+    const unreadMessages = messages.filter(
+      (msg) => msg.sender !== uid && (!msg.readBy || !msg.readBy[uid])
+    );
+
+    if (unreadMessages.length > 0) {
+      console.log(
+        `Đánh dấu ${unreadMessages.length} tin nhắn đã đọc khi nhấn vào input`
+      );
+
+      unreadMessages.forEach((msg) => {
+        if (msg.id) {
+          // Ghi log rõ ràng về việc bắt đầu đánh dấu tin nhắn đã đọc
+          console.log(
+            `Bắt đầu đánh dấu tin nhắn ${msg.id} đã đọc khi click input`
+          );
+
+          // 1. Gửi sự kiện Socket.IO trực tiếp ngay lập tức để đảm bảo real-time
+          const socketSent = emitMessageRead(msg.id, uid, currentChat.chatId);
+          if (socketSent) {
+            console.log(`Đã gửi sự kiện Socket.IO cho tin nhắn ${msg.id}`);
+          }
+
+          // 2. Lưu trạng thái vào cơ sở dữ liệu
+          markMessageAsRead(msg.id, uid, token)
+            .then((response) => {
+              console.log(
+                `API: Tin nhắn ${msg.id} đã được đánh dấu đã đọc khi nhấn input`,
+                response
+              );
+
+              // 3. Cập nhật UI để hiển thị trạng thái đã đọc
+              setMessages((prevMessages) =>
+                prevMessages.map((prevMsg) =>
+                  prevMsg.id === msg.id
+                    ? {
+                        ...prevMsg,
+                        readBy: {
+                          ...(prevMsg.readBy || {}),
+                          [uid]: new Date().toISOString(),
+                        },
+                      }
+                    : prevMsg
+                )
+              );
+            })
+            .catch((err) => {
+              console.error(`Lỗi khi đánh dấu tin nhắn ${msg.id} đã đọc:`, err);
+              // Nếu API gặp lỗi, vẫn cập nhật UI để trải nghiệm người dùng không bị gián đoạn
+              setMessages((prevMessages) =>
+                prevMessages.map((prevMsg) =>
+                  prevMsg.id === msg.id
+                    ? {
+                        ...prevMsg,
+                        readBy: {
+                          ...(prevMsg.readBy || {}),
+                          [uid]: new Date().toISOString(),
+                        },
+                      }
+                    : prevMsg
+                )
+              );
+            });
+        }
+      });
+    }
+  }, [currentChat, uid, token, messages]);
 
   return (
     <div className="chat-container">
@@ -1087,7 +1453,10 @@ const Home = () => {
                     <div>
                       <div className="chat-user-avatar">
                         <img
-                          src={currentParticipant.avatarUrl || "/default-avatar.png"}
+                          src={
+                            currentParticipant.avatarUrl ||
+                            "/default-avatar.png"
+                          }
                           alt="avatar"
                           onError={(e) => {
                             e.target.src = "/default-avatar.png";
@@ -1096,7 +1465,8 @@ const Home = () => {
                       </div>
                       <div>
                         <p className="chat-user-name">
-                          {currentParticipant.firstName} {currentParticipant.lastName}
+                          {currentParticipant.firstName}{" "}
+                          {currentParticipant.lastName}
                         </p>
                         <p className="chat-status">Đang hoạt động</p>
                       </div>
@@ -1119,7 +1489,7 @@ const Home = () => {
                     </div>
                   </div>
                 </div>
-                <div className="chat-content">
+                <div className="chat-content" ref={chatContentRef}>
                   {isLoadingMessages ? (
                     <div className="loading-messages">
                       <p>Đang tải tin nhắn...</p>
@@ -1132,78 +1502,97 @@ const Home = () => {
                       </button>
                     </div>
                   ) : messages && messages.length > 0 ? (
-                    messages.map((msg, index) => {
-                      const isCurrentUser =
-                        msg.sender === uid ||
-                        msg.senderId === uid ||
-                        msg.senderId === "1";
-                      const isPending = msg.pending === true;
-                      const hasError = msg.error === true;
+                    <>
+                      {messages.map((msg, index) => {
+                        const isCurrentUser =
+                          msg.sender === uid ||
+                          msg.senderId === uid ||
+                          msg.senderId === "1";
+                        const isPending = msg.pending === true;
+                        const hasError = msg.error === true;
 
-                      return (
-                        <div
-                          key={msg.id || `msg-${index}`}
-                          className={`message ${
-                            isCurrentUser ? "right" : "left"
-                          } ${isPending ? "pending" : ""} ${
-                            hasError ? "error" : ""
-                          }`}
-                        >
-                         <div className="msg">
-                          {/* Hiển thị ảnh nếu có */}
-                          {msg.imageUrl ? (
-                            <img
-                              src={msg.imageUrl}
-                              alt="Sent"
-                              className="sent-image"
-                              onError={(e) => {
-                                e.target.src = "/default-image.png";
-                              }}
-                            />
-                          ) : msg.fileUrl ? (
-                            // Hiển thị file nếu có
-                            <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer">
-                              📄 {msg.fileName || "Tải xuống file"}
-                            </a>
-                          ) : (
-                            // Hiển thị nội dung văn bản nếu không có ảnh hoặc file
-                            msg.message || msg.text || "Không có nội dung"
-                          )}
-
-                          {/* Hiển thị trạng thái đang gửi */}
-                          {isPending && <span className="status-indicator">⏳</span>}
-
-                          {/* Hiển thị trạng thái lỗi */}
-                          {hasError && <span className="status-indicator">❌</span>}
-                        </div>
-                          <div className="message-time">
-                            {msg.timestamp
-                              ? (() => {
-                                  try {
-                                    let date;
-                                    if (msg.timestamp.seconds) {
-                                      date = new Date(msg.timestamp.seconds * 1000);
-                                    } else {
-                                      date = new Date(msg.timestamp);
+                        return (
+                          <div
+                            key={msg.id || `msg-${index}`}
+                            className={`message ${
+                              isCurrentUser ? "right" : "left"
+                            } ${isPending ? "pending" : ""} ${
+                              hasError ? "error" : ""
+                            }`}
+                          >
+                            <div className="msg">
+                              {msg.message || msg.text || "Không có nội dung"}
+                              {isPending && (
+                                <span className="status-indicator">⏳</span>
+                              )}
+                              {hasError && (
+                                <span className="status-indicator">❌</span>
+                              )}
+                            </div>
+                            <div className="message-time">
+                              {msg.timestamp
+                                ? (() => {
+                                    try {
+                                      let date;
+                                      if (msg.timestamp.seconds) {
+                                        date = new Date(
+                                          msg.timestamp.seconds * 1000
+                                        );
+                                      } else {
+                                        date = new Date(msg.timestamp);
+                                      }
+                                      if (!isNaN(date.getTime())) {
+                                        const hour = date
+                                          .getHours()
+                                          .toString()
+                                          .padStart(2, "0");
+                                        const minute = date
+                                          .getMinutes()
+                                          .toString()
+                                          .padStart(2, "0");
+                                        return `${hour}:${minute}`;
+                                      }
+                                      return "";
+                                    } catch (error) {
+                                      console.error(
+                                        "Error formatting time:",
+                                        error
+                                      );
+                                      return "";
                                     }
-                                    if (!isNaN(date.getTime())) {
-                                      const hour = date
-                                        .getHours()
-                                        .toString()
-                                        .padStart(2, "0");
-                                      return `${hour}:00`;
-                                    }
-                                    return "";
-                                  } catch (error) {
-                                    console.error("Error formatting time:", error);
-                                    return "";
-                                  }
-                                })()
-                              : ""}
+                                  })()
+                                : ""}
+                              {/* Hiển thị trạng thái tin nhắn đã gửi/đã xem */}
+                              {isCurrentUser && !isPending && !hasError && (
+                                <span className="message-status">
+                                  {msg.readBy &&
+                                  Object.keys(msg.readBy).some(
+                                    (id) => id !== uid
+                                  ) ? (
+                                    <span
+                                      title="Đã xem"
+                                      className="read-status"
+                                    >
+                                      <FaCheck className="status-icon double" />
+                                      <FaCheck className="status-icon double overlay" />
+                                    </span>
+                                  ) : (
+                                    <span
+                                      title="Đã gửi"
+                                      className="sent-status"
+                                    >
+                                      <FaCheck className="status-icon" />
+                                    </span>
+                                  )}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })
+                        );
+                      })}
+                      {/* Thêm div trống để cuộn đến cuối cùng */}
+                      <div ref={messagesEndRef} />
+                    </>
                   ) : (
                     <div className="no-messages">
                       <p>Chưa có tin nhắn nào</p>
@@ -1213,10 +1602,12 @@ const Home = () => {
                 </div>
                 <div className="chat-input-area">
                   <input
+                    ref={messageInputRef}
                     type="text"
                     placeholder="Tin nhắn"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
+                    onFocus={handleInputFocus}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleSendMessage();
                     }}
@@ -1508,8 +1899,7 @@ const Home = () => {
               }}
             />
             <h2 className="caller-name">
-              Cuộc gọi video từ{" "}
-              {currentParticipant?.firstName || "Người dùng"}{" "}
+              Cuộc gọi video từ {currentParticipant?.firstName || "Người dùng"}{" "}
               {currentParticipant?.lastName || "không xác định"}
             </h2>
             <div className="button-group">
@@ -1543,6 +1933,7 @@ const Home = () => {
           </div>
         </Modal>
       </div>
+      <Toast />
     </div>
   );
 };
