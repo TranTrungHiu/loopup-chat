@@ -1,54 +1,58 @@
-.group-management-container {
-    background-color: #ffffff;
-    color: #1f1f1f;
-    width: 300px;
-    padding: 8px;
-    font-family: Arial, sans-serif;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+.group-management-container{
+    width: 100%;
+    flex: 0.3;
 }
-
-.group-header {
+.group-header{
     display: flex;
-    align-items: center;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 12px;
-    margin-bottom: 16px;
+    flex-direction: row;
 }
-
 .back-button {
-    background: lightgray;
-    border: none;
-    font-size: 16px;
-    margin-right: 12px;
+    margin-right: 10px;
     cursor: pointer;
-    color: black;
+    height: 35px;
+    margin-top: 20px;
+    border-radius: 16px;
+    border-width: 1px;
+    border-style: solid;
 }
-
-.group-header h3 {
-    font-size: 16px;
-    margin: 0;
+.back-button:hover {
+    background-color: #dc3545;
 }
-
-.group-section {
+.menu-tabs {
     display: flex;
+    gap: 10px;
+    margin: 15px 0;
     flex-direction: column;
-    gap: 12px;
-}
-
-.group-section label {
+  }
+  
+  .menu-tabs button {
+    background-color: #f0f0f0;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
     display: flex;
     align-items: center;
-    margin-bottom: 10px;
-    color: #555;
-}
-
-.group-section input:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-}
-
-
-input[type="checkbox"]:disabled {
-    cursor: not-allowed;
-}
+    gap: 6px;
+    font-weight: bold;
+  }
+  
+  .menu-tabs button.active {
+    background-color: #007bff;
+    color: white;
+  }
+  
+  .confirm-buttons button {
+    margin-left: 6px;
+  }
+  
+  .danger-button {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  

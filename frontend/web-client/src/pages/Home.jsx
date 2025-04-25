@@ -110,7 +110,6 @@ const Home = () => {
   const [isFindFriendModalOpen, setIsFindFriendModalOpen] = useState(false);
   const navigate = useNavigate();
 
-
   // xử lý emoji
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   // Hàm xử lý khi chọn emoji
@@ -1454,21 +1453,27 @@ const Home = () => {
                       <div className="chat-user-avatar">
                         <img
                           src={
-                            currentParticipant.avatarUrl ||
-                            "/default-avatar.png"
+                            currentChat.isGroupChat
+                              ? currentChat.avataGroupChatUrl || "/default-group-avatar.png"
+                              : currentParticipant.avatarUrl || "/default-avatar.png"
                           }
-                          alt="avatar"
+                          alt={currentChat.isGroupChat ? "group avatar" : "user avatar"}
                           onError={(e) => {
-                            e.target.src = "/default-avatar.png";
+                            e.target.src = currentChat.isGroupChat
+                              ? "/default-group-avatar.png"
+                              : "/default-avatar.png";
                           }}
                         />
                       </div>
                       <div>
                         <p className="chat-user-name">
-                          {currentParticipant.firstName}{" "}
-                          {currentParticipant.lastName}
+                          {currentChat.isGroupChat
+                            ? currentChat.groupName || "Nhóm không tên"
+                            : `${currentParticipant.firstName} ${currentParticipant.lastName}`}
                         </p>
-                        <p className="chat-status">Đang hoạt động</p>
+                        {!currentChat.isGroupChat && (
+                          <p className="chat-status">Đang hoạt động</p>
+                        )}
                       </div>
                     </div>
                     <div className="chat-actions">
@@ -1502,7 +1507,7 @@ const Home = () => {
                       </button>
                     </div>
                   ) : messages && messages.length > 0 ? (
-                    <>
+                    <div className="messages-wrapper">
                       {messages.map((msg, index) => {
                         const isCurrentUser =
                           msg.sender === uid ||
@@ -1511,88 +1516,78 @@ const Home = () => {
                         const isPending = msg.pending === true;
                         const hasError = msg.error === true;
 
+                        // Định dạng thời gian
+                        const formatTime = (timestamp) => {
+                          try {
+                            let date;
+                            if (timestamp?.seconds) {
+                              date = new Date(timestamp.seconds * 1000);
+                            } else {
+                              date = new Date(timestamp);
+                            }
+                            if (!isNaN(date.getTime())) {
+                              const hour = date.getHours().toString().padStart(2, "0");
+                              const minute = date.getMinutes().toString().padStart(2, "0");
+                              return `${hour}:${minute}`;
+                            }
+                            return "";
+                          } catch (error) {
+                            console.error("Error formatting time:", error);
+                            return "";
+                          }
+                        };
+
                         return (
                           <div
                             key={msg.id || `msg-${index}`}
-                            className={`message ${
-                              isCurrentUser ? "right" : "left"
-                            } ${isPending ? "pending" : ""} ${
-                              hasError ? "error" : ""
+                            className={`message-container ${
+                              isCurrentUser ? "message-right" : "message-left"
                             }`}
                           >
-                            <div className="msg">
-                              {msg.message || msg.text || "Không có nội dung"}
-                              {isPending && (
-                                <span className="status-indicator">⏳</span>
-                              )}
-                              {hasError && (
-                                <span className="status-indicator">❌</span>
-                              )}
-                            </div>
-                            <div className="message-time">
-                              {msg.timestamp
-                                ? (() => {
-                                    try {
-                                      let date;
-                                      if (msg.timestamp.seconds) {
-                                        date = new Date(
-                                          msg.timestamp.seconds * 1000
-                                        );
-                                      } else {
-                                        date = new Date(msg.timestamp);
-                                      }
-                                      if (!isNaN(date.getTime())) {
-                                        const hour = date
-                                          .getHours()
-                                          .toString()
-                                          .padStart(2, "0");
-                                        const minute = date
-                                          .getMinutes()
-                                          .toString()
-                                          .padStart(2, "0");
-                                        return `${hour}:${minute}`;
-                                      }
-                                      return "";
-                                    } catch (error) {
-                                      console.error(
-                                        "Error formatting time:",
-                                        error
-                                      );
-                                      return "";
-                                    }
-                                  })()
-                                : ""}
-                              {/* Hiển thị trạng thái tin nhắn đã gửi/đã xem */}
-                              {isCurrentUser && !isPending && !hasError && (
-                                <span className="message-status">
-                                  {msg.readBy &&
-                                  Object.keys(msg.readBy).some(
-                                    (id) => id !== uid
-                                  ) ? (
-                                    <span
-                                      title="Đã xem"
-                                      className="read-status"
-                                    >
-                                      <FaCheck className="status-icon double" />
-                                      <FaCheck className="status-icon double overlay" />
-                                    </span>
-                                  ) : (
-                                    <span
-                                      title="Đã gửi"
-                                      className="sent-status"
-                                    >
-                                      <FaCheck className="status-icon" />
-                                    </span>
-                                  )}
+                            <div
+                              className={`message ${
+                                isCurrentUser ? "current-user" : "other-user"
+                              } ${isPending ? "pending" : ""} ${
+                                hasError ? "error" : ""
+                              }`}
+                            >
+                              <div className="message-body">
+                                <span className="message-text">
+                                  {msg.message || msg.text || "Không có nội dung"}
                                 </span>
-                              )}
+                                {isPending && (
+                                  <span className="status-indicator pending">⏳</span>
+                                )}
+                                {hasError && (
+                                  <span className="status-indicator error">❌</span>
+                                )}
+                              </div>
+                              <div className="message-meta">
+                                <span className="message-time">
+                                  {formatTime(msg.timestamp)}
+                                </span>
+                                {isCurrentUser && !isPending && !hasError && (
+                                  <span className="message-status">
+                                    {msg.readBy &&
+                                    Object.keys(msg.readBy).some((id) => id !== uid) ? (
+                                      <span title="Đã xem" className="read-status">
+                                        <FaCheck className="status-icon double" />
+                                        <FaCheck className="status-icon double overlay" />
+                                      </span>
+                                    ) : (
+                                      <span title="Đã gửi" className="sent-status">
+                                        <FaCheck className="status-icon" />
+                                      </span>
+                                    )}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         );
                       })}
-                      {/* Thêm div trống để cuộn đến cuối cùng */}
                       <div ref={messagesEndRef} />
-                    </>
+                    </div>
                   ) : (
                     <div className="no-messages">
                       <p>Chưa có tin nhắn nào</p>
@@ -1612,7 +1607,7 @@ const Home = () => {
                       if (e.key === "Enter") handleSendMessage();
                     }}
                   />
-                    {/* Emoji Picker */}
+                  {/* Emoji Picker */}
                   <button
                     className="emoji-btn"
                     title="Chọn emoji"
@@ -1628,7 +1623,7 @@ const Home = () => {
 
                   {/* File Upload */}
                   <label htmlFor="file-upload" className="file-upload-label">
-                    <FaFileAlt size={30}/>
+                    <FaFileAlt size={30} />
                   </label>
                   <input
                     type="file"
@@ -1638,16 +1633,16 @@ const Home = () => {
                   />
 
                   {/* Image Upload */}
-                <label htmlFor="image-upload" className="image-upload-label">
-                  <FaImage size={30} />
-                </label>
-                <input
-                  type="file"
-                  id="image-upload"
-                  className="image-upload-input"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                />
+                  <label htmlFor="image-upload" className="image-upload-label">
+                    <FaImage size={30} />
+                  </label>
+                  <input
+                    type="file"
+                    id="image-upload"
+                    className="image-upload-input"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                  />
 
                   {/* Button Send */}
                   <button
@@ -1861,8 +1856,14 @@ const Home = () => {
           token={token}
         />
         {currentParticipant && tabs === "Chat" && chatInfor && (
-          <InformationChat user={currentParticipant} />
-        )}
+          <InformationChat
+              user={currentParticipant}
+              isGroupChat={currentChat?.isGroupChat || false}
+              isAdmin={currentChat?.adminId === uid}
+              chat={currentChat} // Thêm prop chat
+              uid={uid}
+          />
+      )}
         <Modal
           isOpen={isVideoCall}
           onRequestClose={handleEndCall}

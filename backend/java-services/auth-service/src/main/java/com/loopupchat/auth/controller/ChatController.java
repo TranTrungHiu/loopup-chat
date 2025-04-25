@@ -31,12 +31,14 @@ public class ChatController {
 
             if (isGroupChat) {
                 // Tạo nhóm chat
-                String adminId = (String) request.get("creatorId");
+                String adminId = (String) request.get("adminId");
                 List<String> memberIds = (List<String>) request.get("memberIds");
                 String groupName = (String) request.getOrDefault("groupName", "Nhóm mới");
 
-                if (adminId == null || memberIds == null || memberIds.isEmpty()) {
-                    return ResponseEntity.badRequest().body(Map.of("message", "Thiếu creatorId hoặc memberIds"));
+                if (adminId == null) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "Thiếu adminId"));
+                } else if (memberIds == null || memberIds.isEmpty()) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "Thiếu danh sách thành viên"));
                 }
 
                 // Đảm bảo adminId nằm trong danh sách participants
@@ -309,6 +311,33 @@ public class ChatController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Lỗi khi nhượng quyền admin: " + e.getMessage()));
+        }
+    }
+
+    // Xóa nhóm chat
+    @DeleteMapping("/{chatId}")
+    public ResponseEntity<?> deleteChat(@PathVariable String chatId) {
+        Firestore firestore = FirestoreClient.getFirestore();
+        DocumentReference chatRef = firestore.collection("chats").document(chatId);
+        CollectionReference messagesRef = firestore.collection("messages");
+
+        try {
+            // Xoá document chat chính
+            chatRef.delete();
+
+            // Lấy và xoá tất cả messages thuộc chatId này
+            Query query = messagesRef.whereEqualTo("chatId", chatId);
+            ApiFuture<QuerySnapshot> future = query.get();
+            List<QueryDocumentSnapshot> messages = future.get().getDocuments();
+
+            for (QueryDocumentSnapshot message : messages) {
+                message.getReference().delete();
+            }
+
+            return ResponseEntity.ok(Map.of("message", "Đã xoá nhóm và toàn bộ tin nhắn."));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Lỗi khi xoá nhóm: " + e.getMessage()));
         }
     }
 

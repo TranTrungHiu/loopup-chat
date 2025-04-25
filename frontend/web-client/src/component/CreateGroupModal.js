@@ -6,6 +6,8 @@ const CreateGroupModal = ({ onClose, userId }) => {
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [friendList, setFriendList] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
+
+    console.log("userId của người tạo: ", userId);
     useEffect(() => {
         const fetchFriends = async () => {
             try {
