@@ -57,6 +57,7 @@ import InviteTab from "../component/InviteTab";
 import FriendList from "../component/FriendList";
 import FindFriendModal from "../component/FindFriendModal";
 import axios from "axios";
+import EmojiPicker from "emoji-picker-react";
 import {
   fetchChats,
   fetchMessages,
@@ -75,8 +76,6 @@ import {
   emitMessageRead,
 } from "../services/socketService";
 import ChatList from "../component/ChatList";
-import { formatDistanceToNow, format } from "date-fns";
-import { vi } from "date-fns/locale";
 import VideoCall from "../component/VideoCall";
 Modal.setAppElement("#root");
 
@@ -1441,6 +1440,7 @@ const Home = () => {
               onChatSelect={handleChatSelect}
               onRetry={loadChats}
               onFindFriend={() => setIsUserModalOpen(true)}
+              uid={uid}
             />
           </div>
         )}

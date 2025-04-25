@@ -1050,7 +1050,7 @@
     transform: translateY(-50%);
     outline: none;
     z-index: 1001;
-
+}
 /* Thêm vào cuối file - Style cho trạng thái tin nhắn */
 
 /* Container cho trạng thái tin nhắn */
@@ -1219,5 +1219,29 @@
 
 .no-messages p:last-child {
   font-size: 14px;
+  color: #999;
+}
+
+.chat-item.group-avatar {
+  /* Giao diện avatar cho chat nhóm */
+  border: 2px solid #1976d2; /* Viền xanh để phân biệt */
+}
+
+.chat-item.default-avatar {
+  /* Giao diện avatar mặc định */
+  opacity: 0.7;
+}
+
+.chat-name {
+  font-weight: 500;
+}
+
+.chat-preview {
+  color: #666;
+  font-size: 0.9em;
+}
+
+.chat-time {
+  font-size: 0.8em;
   color: #999;
 }
