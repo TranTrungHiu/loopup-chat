@@ -129,15 +129,16 @@ const CreateGroupModal = ({ onClose, userId }) => {
                         disabled={selectedUsers.length < 2 || groupName.trim() === ""}
                         onClick={async () => {
                             try {
-                                const response = await fetch("http://localhost:8080/api/chats/group", {
+                                const response = await fetch("http://localhost:8080/api/chats", {
                                     method: "POST",
                                     headers: {
                                         "Content-Type": "application/json",
                                     },
                                     body: JSON.stringify({
-                                        creatorId: userId,
+                                        adminId: userId,
                                         groupName: groupName,
                                         memberIds: selectedUsers.map(user => user.id),
+                                        isGroupChat: true,
                                     }),
                                 });
                         

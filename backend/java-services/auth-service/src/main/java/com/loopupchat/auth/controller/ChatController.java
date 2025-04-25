@@ -21,28 +21,72 @@ import java.util.*;
 public class ChatController {
 
     @PostMapping
-    public ResponseEntity<?> createOrGetChat(@RequestBody Map<String, String> request) {
-        String user1 = request.get("user1");
-        String user2 = request.get("user2");
-        String chatId = user1 + "_" + user2;
-
+    public ResponseEntity<?> createOrGetChat(@RequestBody Map<String, Object> request) {
         Firestore firestore = FirestoreClient.getFirestore();
-        DocumentReference chatRef = firestore.collection("chats").document(chatId);
+        CollectionReference chatsRef = firestore.collection("chats");
 
         try {
-            DocumentSnapshot snapshot = chatRef.get().get();
-            if (snapshot.exists()) {
-                return ResponseEntity.ok(snapshot.getData());
-            } else {
+            // Lấy thông tin từ request
+            boolean isGroupChat = request.get("isGroupChat") != null && (Boolean) request.get("isGroupChat");
+
+            if (isGroupChat) {
+                // Tạo nhóm chat
+                String adminId = (String) request.get("creatorId");
+                List<String> memberIds = (List<String>) request.get("memberIds");
+                String groupName = (String) request.getOrDefault("groupName", "Nhóm mới");
+
+                if (adminId == null || memberIds == null || memberIds.isEmpty()) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "Thiếu creatorId hoặc memberIds"));
+                }
+
+                // Đảm bảo adminId nằm trong danh sách participants
+                if (!memberIds.contains(adminId)) {
+                    memberIds.add(adminId);
+                }
+
+                String chatId = UUID.randomUUID().toString();
+                DocumentReference chatRef = chatsRef.document(chatId);
+
                 Map<String, Object> chatData = new HashMap<>();
                 chatData.put("chatId", chatId);
-                chatData.put("participants", Arrays.asList(user1, user2));
+                chatData.put("participants", memberIds);
                 chatData.put("lastMessage", "");
                 chatData.put("lastUpdated", new Date());
+                chatData.put("isGroupChat", true);
+                chatData.put("adminId", adminId);
+                chatData.put("groupName", groupName);
 
                 chatRef.set(chatData);
                 return ResponseEntity.ok(chatData);
+            } else {
+                // Tạo hoặc lấy chat 1-1
+                String user1 = (String) request.get("user1");
+                String user2 = (String) request.get("user2");
+
+                if (user1 == null || user2 == null) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "Thiếu user1 hoặc user2"));
+                }
+
+                // Tạo chatId theo định dạng cố định để đảm bảo không bị lặp
+                String chatId = user1.compareTo(user2) < 0 ? user1 + "_" + user2 : user2 + "_" + user1;
+                DocumentReference chatRef = chatsRef.document(chatId);
+                DocumentSnapshot snapshot = chatRef.get().get();
+
+                if (snapshot.exists()) {
+                    return ResponseEntity.ok(snapshot.getData());
+                } else {
+                    Map<String, Object> chatData = new HashMap<>();
+                    chatData.put("chatId", chatId);
+                    chatData.put("participants", Arrays.asList(user1, user2));
+                    chatData.put("lastMessage", "");
+                    chatData.put("lastUpdated", new Date());
+                    chatData.put("isGroupChat", false);
+
+                    chatRef.set(chatData);
+                    return ResponseEntity.ok(chatData);
+                }
             }
+
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Lỗi khi tạo hoặc lấy cuộc trò chuyện: " + e.getMessage()));
@@ -165,73 +209,106 @@ public class ChatController {
         }
     }
 
-    // Tạo chat nhóm
-    @PostMapping("/group")
-    public ResponseEntity<?> createGroupChat(@RequestBody Map<String, Object> request) {
-        String creatorId = (String) request.get("creatorId");
-        List<String> memberIds = (List<String>) request.get("memberIds");
-        String groupName = (String) request.getOrDefault("groupName", "Nhóm mới");
-
-        if (creatorId == null || memberIds == null || memberIds.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Thiếu creatorId hoặc memberIds"));
-        }
-
-        // Thêm creator vào danh sách participants nếu chưa có
-        if (!memberIds.contains(creatorId)) {
-            memberIds.add(creatorId);
-        }
-
-        String chatId = UUID.randomUUID().toString(); // ChatId cho nhóm
+    // Lấy danh sách thành viên trong nhóm chat
+    // Trả về thông tin là chuỗi Users
+    @GetMapping("/{chatId}/members")
+    public ResponseEntity<?> getGroupMembers(@PathVariable String chatId) {
         Firestore firestore = FirestoreClient.getFirestore();
         DocumentReference chatRef = firestore.collection("chats").document(chatId);
 
         try {
-            Map<String, Object> chatData = new HashMap<>();
-            chatData.put("chatId", chatId);
-            chatData.put("participants", memberIds);
-            chatData.put("lastMessage", "");
-            chatData.put("lastUpdated", new Date());
-            chatData.put("isGroupChat", true);
-            chatData.put("adminId", creatorId);
-            chatData.put("groupName", groupName);
+            DocumentSnapshot snapshot = chatRef.get().get();
+            if (!snapshot.exists() || !Boolean.TRUE.equals(snapshot.getBoolean("isGroupChat"))) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Không tìm thấy nhóm hoặc không phải nhóm chat"));
+            }
 
-            chatRef.set(chatData);
+            List<String> memberIds = (List<String>) snapshot.get("participants");
 
-            return ResponseEntity.ok(chatData);
+            List<Map<String, Object>> members = new ArrayList<>();
+            for (String uid : memberIds) {
+                DocumentSnapshot userSnap = firestore.collection("users").document(uid).get().get();
+                if (userSnap.exists())
+                    members.add(userSnap.getData());
+            }
+
+            return ResponseEntity.ok(members);
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Lỗi khi tạo nhóm chat: " + e.getMessage()));
+                    .body(Map.of("message", "Lỗi khi lấy danh sách thành viên: " + e.getMessage()));
         }
     }
 
-    // Lấy danh sách nhóm chat của người dùng dựa theo userId
-    // Author: Thong
-    @GetMapping("/group")
-    public ResponseEntity<?> getGroupChatsByUser(@RequestParam String userId) {
+    // Thêm thành viên vào nhóm chat
+    // Trả về Message
+    @PostMapping("/{chatId}/add-member")
+    public ResponseEntity<?> addMember(@PathVariable String chatId, @RequestBody Map<String, Object> body) {
+        String newMemberId = (String) body.get("userId");
         Firestore firestore = FirestoreClient.getFirestore();
-        CollectionReference chatsRef = firestore.collection("chats");
+        DocumentReference chatRef = firestore.collection("chats").document(chatId);
 
         try {
-            // Query: chats mà participants chứa userId và isGroupChat = true
-            Query query = chatsRef
-                    .whereArrayContains("participants", userId)
-                    .whereEqualTo("isGroupChat", true);
-
-            List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
-
-            List<Map<String, Object>> groupChats = new ArrayList<>();
-            for (QueryDocumentSnapshot doc : documents) {
-                Map<String, Object> chatData = new HashMap<>(doc.getData());
-                chatData.put("chatId", doc.getId());
-                groupChats.add(chatData);
+            DocumentSnapshot snapshot = chatRef.get().get();
+            if (!snapshot.exists() || !Boolean.TRUE.equals(snapshot.getBoolean("isGroupChat"))) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Không phải nhóm chat hợp lệ"));
             }
 
-            return ResponseEntity.ok(groupChats);
+            List<String> members = (List<String>) snapshot.get("participants");
+            if (members.contains(newMemberId)) {
+                return ResponseEntity.ok(Map.of("message", "Người dùng đã ở trong nhóm"));
+            }
+
+            members.add(newMemberId);
+            chatRef.update("participants", members);
+
+            return ResponseEntity.ok(Map.of("message", "Đã thêm thành viên"));
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Lỗi khi lấy thông tin nhóm chat: " + e.getMessage()));
+                    .body(Map.of("message", "Lỗi khi thêm thành viên: " + e.getMessage()));
+        }
+    }
+
+    // Xoá thành viên khỏi nhóm chat
+    // Trả về Message
+    @PostMapping("/{chatId}/remove-member")
+    public ResponseEntity<?> removeMember(@PathVariable String chatId, @RequestBody Map<String, Object> body) {
+        String memberId = (String) body.get("userId");
+        Firestore firestore = FirestoreClient.getFirestore();
+
+        // lấy danh sách chats
+        DocumentReference chatRef = firestore.collection("chats").document(chatId);
+
+        try {
+            DocumentSnapshot snapshot = chatRef.get().get();
+            List<String> members = (List<String>) snapshot.get("participants");
+
+            // Remove người dùng đó
+            members.remove(memberId);
+            // Cập nhật lại danh sách participants trong Firestore
+            chatRef.update("participants", members);
+
+            return ResponseEntity.ok(Map.of("message", "Đã xoá thành viên"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Lỗi khi xoá thành viên: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{chatId}/transfer-admin")
+    public ResponseEntity<?> transferAdmin(@PathVariable String chatId, @RequestBody Map<String, Object> body) {
+        String userId = (String) body.get("userId");
+        Firestore firestore = FirestoreClient.getFirestore();
+        DocumentReference chatRef = firestore.collection("chats").document(chatId);
+
+        try {
+            DocumentSnapshot snapshot = chatRef.get().get();
+            List<String> members = (List<String>) snapshot.get("participants");
+
+            chatRef.update("adminId", userId);
+            return ResponseEntity.ok(Map.of("message", "Đã nhượng quyền admin"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Lỗi khi nhượng quyền admin: " + e.getMessage()));
         }
     }
 
