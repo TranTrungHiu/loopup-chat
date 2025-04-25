@@ -104,7 +104,6 @@ const Home = () => {
   const [isFindFriendModalOpen, setIsFindFriendModalOpen] = useState(false);
   const navigate = useNavigate();
 
-
   // Video call states
   const [isVideoCall, setIsVideoCall] = useState(false);
   const [localStream, setLocalStream] = useState(null);
@@ -143,9 +142,13 @@ const Home = () => {
       audio.play().catch((err) => {
         console.error("Audio playback error:", err);
         if (err.name === "NotSupportedError") {
-          console.error("File format not supported or file not found. Ensure /mp3/ringtone.mp3 exists in public folder.");
+          console.error(
+            "File format not supported or file not found. Ensure /mp3/ringtone.mp3 exists in public folder."
+          );
         } else if (err.name === "NotAllowedError") {
-          console.error("Autoplay blocked. User interaction may be required before playing audio.");
+          console.error(
+            "Autoplay blocked. User interaction may be required before playing audio."
+          );
         }
       });
     }
@@ -269,7 +272,10 @@ const Home = () => {
               participantMap[chat.chatId] = info;
             }
           } catch (err) {
-            console.error(`Error getting participant for chat ${chat.chatId}:`, err);
+            console.error(
+              `Error getting participant for chat ${chat.chatId}:`,
+              err
+            );
           }
         }
         setParticipantsInfo(participantMap);
@@ -456,11 +462,6 @@ const Home = () => {
 
     try {
       const messagesData = await fetchMessages(chatId, token);
-<<<<<<< HEAD
-      console.log("Tin nhắn đã tải:", messagesData);
-      console.log(`Nhận được ${messagesData?.length || 0} tin nhắn`);
-=======
->>>>>>> af657cf49153d19de7e81dca2638f51bddb0b3c4
       setMessages(Array.isArray(messagesData) ? messagesData : []);
     } catch (err) {
       console.error("Lỗi khi tải tin nhắn:", err);
@@ -584,8 +585,10 @@ const Home = () => {
   // Video call logic
   useEffect(() => {
     const connectWebSocket = () => {
-      socket.current = new WebSocket(`ws://localhost:8080/ws/video?userId=${uid}`);
-      
+      socket.current = new WebSocket(
+        `ws://localhost:8080/ws/video?userId=${uid}`
+      );
+
       socket.current.onopen = () => {
         console.log("WebSocket connected for user:", uid);
         while (pendingCandidates.current.length > 0) {
@@ -650,14 +653,18 @@ const Home = () => {
 
     try {
       await waitForWebSocket();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      }).catch((err) => {
-        console.error("Media access error:", err);
-        alert("Không thể truy cập camera hoặc micro. Vui lòng kiểm tra quyền.");
-        throw err;
-      });
+      const stream = await navigator.mediaDevices
+        .getUserMedia({
+          video: true,
+          audio: true,
+        })
+        .catch((err) => {
+          console.error("Media access error:", err);
+          alert(
+            "Không thể truy cập camera hoặc micro. Vui lòng kiểm tra quyền."
+          );
+          throw err;
+        });
       setLocalStream(stream);
 
       if (peerConnection.current) {
@@ -665,9 +672,9 @@ const Home = () => {
       }
       peerConnection.current = new RTCPeerConnection({ iceServers });
 
-      stream.getTracks().forEach((track) =>
-        peerConnection.current.addTrack(track, stream)
-      );
+      stream
+        .getTracks()
+        .forEach((track) => peerConnection.current.addTrack(track, stream));
 
       peerConnection.current.onicecandidate = (event) => {
         if (event.candidate) {
@@ -719,13 +726,18 @@ const Home = () => {
 
     try {
       // Fetch caller info
-      const response = await fetch(`http://localhost:8080/api/user/profile/${data.from}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        `http://localhost:8080/api/user/profile/${data.from}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       if (!response.ok) {
-        throw new Error(`Không thể lấy thông tin người gọi: ${response.status}`);
+        throw new Error(
+          `Không thể lấy thông tin người gọi: ${response.status}`
+        );
       }
       const callerInfo = await response.json();
       console.log("Caller info:", callerInfo);
@@ -748,14 +760,18 @@ const Home = () => {
     if (!incomingCall) return;
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      }).catch((err) => {
-        console.error("Media access error:", err);
-        alert("Không thể truy cập camera hoặc micro. Vui lòng kiểm tra quyền.");
-        throw err;
-      });
+      const stream = await navigator.mediaDevices
+        .getUserMedia({
+          video: true,
+          audio: true,
+        })
+        .catch((err) => {
+          console.error("Media access error:", err);
+          alert(
+            "Không thể truy cập camera hoặc micro. Vui lòng kiểm tra quyền."
+          );
+          throw err;
+        });
       setLocalStream(stream);
 
       if (peerConnection.current) {
@@ -763,9 +779,9 @@ const Home = () => {
       }
       peerConnection.current = new RTCPeerConnection({ iceServers });
 
-      stream.getTracks().forEach((track) =>
-        peerConnection.current.addTrack(track, stream)
-      );
+      stream
+        .getTracks()
+        .forEach((track) => peerConnection.current.addTrack(track, stream));
 
       peerConnection.current.onicecandidate = (event) => {
         if (event.candidate) {
@@ -1021,7 +1037,10 @@ const Home = () => {
                     <div>
                       <div className="chat-user-avatar">
                         <img
-                          src={currentParticipant.avatarUrl || "/default-avatar.png"}
+                          src={
+                            currentParticipant.avatarUrl ||
+                            "/default-avatar.png"
+                          }
                           alt="avatar"
                           onError={(e) => {
                             e.target.src = "/default-avatar.png";
@@ -1030,7 +1049,8 @@ const Home = () => {
                       </div>
                       <div>
                         <p className="chat-user-name">
-                          {currentParticipant.firstName} {currentParticipant.lastName}
+                          {currentParticipant.firstName}{" "}
+                          {currentParticipant.lastName}
                         </p>
                         <p className="chat-status">Đang hoạt động</p>
                       </div>
@@ -1066,118 +1086,65 @@ const Home = () => {
                       </button>
                     </div>
                   ) : messages && messages.length > 0 ? (
-                    <div className="message-container">
-                      {messages.map((msg, index) => {
-                        // Determine if current user is the sender of this message
-                        const isCurrentUser = msg.sender === uid;
+                    messages.map((msg, index) => {
+                      const isCurrentUser =
+                        msg.sender === uid ||
+                        msg.senderId === uid ||
+                        msg.senderId === "1";
+                      const isPending = msg.pending === true;
+                      const hasError = msg.error === true;
 
-                        // Status indicators
-                        const isPending = msg.pending === true;
-                        const hasError = msg.error === true;
-
-                        // Format timestamp based on the Firestore timestamp format
-                        let formattedTime = "";
-                        try {
-                          if (msg.timestamp) {
-                            if (msg.timestamp.seconds) {
-                              // Handle Firestore timestamp format
-                              formattedTime = format(
-                                new Date(msg.timestamp.seconds * 1000),
-                                "HH:mm",
-                                { locale: vi }
-                              );
-                            } else if (
-                              typeof msg.timestamp === "object" &&
-                              msg.timestamp._seconds
-                            ) {
-                              // Handle serialized Firestore timestamp
-                              formattedTime = format(
-                                new Date(msg.timestamp._seconds * 1000),
-                                "HH:mm",
-                                { locale: vi }
-                              );
-                            } else if (typeof msg.timestamp === "string") {
-                              // Handle ISO string date format
-                              formattedTime = format(
-                                new Date(msg.timestamp),
-                                "HH:mm",
-                                { locale: vi }
-                              );
-                            } else if (msg.timestamp instanceof Date) {
-                              // Handle JavaScript Date object
-                              formattedTime = format(msg.timestamp, "HH:mm", {
-                                locale: vi,
-                              });
-                            } else if (
-                              typeof msg.timestamp.toDate === "function"
-                            ) {
-                              // Handle Firestore timestamp object with toDate method
-                              formattedTime = format(
-                                msg.timestamp.toDate(),
-                                "HH:mm",
-                                { locale: vi }
-                              );
-                            } else {
-                              // Fallback: try to create a date directly
-                              formattedTime = format(
-                                new Date(msg.timestamp),
-                                "HH:mm",
-                                { locale: vi }
-                              );
-                            }
-                          }
-                        } catch (error) {
-                          console.error(
-                            "Failed to format timestamp:",
-                            error,
-                            "Original timestamp:",
-                            msg.timestamp
-                          );
-                        }
-
-                        return (
-                          <div
-                            key={msg.id || `msg-${index}`}
-                            className={`message ${
-                              isCurrentUser ? "right" : "left"
-                            } ${isPending ? "pending" : ""} ${
-                              hasError ? "error" : ""
-                            }`}
-                          >
-                            {!isCurrentUser && (
-                              <div className="message-avatar">
-                                <img
-                                  src={
-                                    currentParticipant.avatarUrl ||
-                                    "/default-avatar.png"
-                                  }
-                                  alt="avatar"
-                                  onError={(e) => {
-                                    e.target.src = "/default-avatar.png";
-                                  }}
-                                />
-                              </div>
+                      return (
+                        <div
+                          key={msg.id || `msg-${index}`}
+                          className={`message ${
+                            isCurrentUser ? "right" : "left"
+                          } ${isPending ? "pending" : ""} ${
+                            hasError ? "error" : ""
+                          }`}
+                        >
+                          <div className="msg">
+                            {msg.message || msg.text || "Không có nội dung"}
+                            {isPending && (
+                              <span className="status-indicator">⏳</span>
                             )}
-                            <div className="message-content">
-                              <div className="msg">
-                                {msg.message}
-                                {isPending && (
-                                  <span className="status-indicator">⏳</span>
-                                )}
-                                {hasError && (
-                                  <span className="status-indicator">❌</span>
-                                )}
-                              </div>
-                              {formattedTime && (
-                                <div className="message-time">
-                                  {formattedTime}
-                                </div>
-                              )}
-                            </div>
+                            {hasError && (
+                              <span className="status-indicator">❌</span>
+                            )}
                           </div>
-                        );
-                      })}
-                    </div>
+                          <div className="message-time">
+                            {msg.timestamp
+                              ? (() => {
+                                  try {
+                                    let date;
+                                    if (msg.timestamp.seconds) {
+                                      date = new Date(
+                                        msg.timestamp.seconds * 1000
+                                      );
+                                    } else {
+                                      date = new Date(msg.timestamp);
+                                    }
+                                    if (!isNaN(date.getTime())) {
+                                      const hour = date
+                                        .getHours()
+                                        .toString()
+                                        .padStart(2, "0");
+                                      return `${hour}:00`;
+                                    }
+                                    return "";
+                                  } catch (error) {
+                                    console.error(
+                                      "Error formatting time:",
+                                      error
+                                    );
+                                    return "";
+                                  }
+                                })()
+                              : ""}
+                          </div>
+                        </div>
+                      );
+                    })
                   ) : (
                     <div className="no-messages">
                       <p>Chưa có tin nhắn nào</p>
@@ -1444,8 +1411,7 @@ const Home = () => {
               }}
             />
             <h2 className="caller-name">
-              Cuộc gọi video từ{" "}
-              {currentParticipant?.firstName || "Người dùng"}{" "}
+              Cuộc gọi video từ {currentParticipant?.firstName || "Người dùng"}{" "}
               {currentParticipant?.lastName || "không xác định"}
             </h2>
             <div className="button-group">
