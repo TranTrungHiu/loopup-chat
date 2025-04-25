@@ -11,6 +11,7 @@ import com.google.firebase.cloud.FirestoreClient;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -219,6 +220,60 @@ public class MessageController {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Lỗi khi đánh dấu tin nhắn đã đọc: " + e.getMessage()));
+        }
+    }
+
+    // Gửi ảnh
+    @PostMapping("/api/messages/image")
+    public ResponseEntity<?> uploadImage(
+            @RequestParam("image") MultipartFile image,
+            @RequestParam("chatId") String chatId,
+            @RequestParam("sender") String sender) {
+        try {
+            // Lưu ảnh vào hệ thống hoặc cloud storage
+            String imageName = image.getOriginalFilename();
+            String imageUrl = "https://your-storage-service.com/" + imageName;
+
+            // Lưu thông tin ảnh vào Firestore
+            Firestore firestore = FirestoreClient.getFirestore();
+            DocumentReference chatRef = firestore.collection("chats").document(chatId);
+            Map<String, Object> messageData = new HashMap<>();
+            messageData.put("sender", sender);
+            messageData.put("imageUrl", imageUrl);
+            messageData.put("timestamp", new Date());
+            chatRef.collection("messages").add(messageData);
+
+            return ResponseEntity.ok(Map.of("message", "Image uploaded successfully", "imageUrl", imageUrl));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error uploading image");
+        }
+    }
+
+    // Xử lý upload file
+    @PostMapping("/api/messages/file")
+    public ResponseEntity<?> uploadFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("chatId") String chatId,
+            @RequestParam("sender") String sender) {
+        try {
+            // Lưu file vào hệ thống hoặc cloud storage
+            String fileName = file.getOriginalFilename();
+            String fileUrl = "https://your-storage-service.com/" + fileName;
+
+            // Lưu thông tin file vào Firestore
+            Firestore firestore = FirestoreClient.getFirestore();
+            DocumentReference chatRef = firestore.collection("chats").document(chatId);
+            Map<String, Object> messageData = new HashMap<>();
+            messageData.put("sender", sender);
+            messageData.put("fileUrl", fileUrl);
+            messageData.put("timestamp", new Date());
+            chatRef.collection("messages").add(messageData);
+
+            return ResponseEntity.ok(Map.of("message", "File uploaded successfully", "fileUrl", fileUrl));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error uploading file");
         }
     }
 }

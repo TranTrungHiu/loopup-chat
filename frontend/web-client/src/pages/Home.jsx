@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import "./styles/Home.css";
-import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { ToastContainer } from "react-toastify";
+import EmojiPicker from "emoji-picker-react";
 import {
   Button,
   IconButton,
@@ -47,6 +46,9 @@ import {
   FaPencilAlt,
   FaUser,
   FaSignOutAlt,
+  FaFileAlt,
+  FaSmile,
+  FaImage,
 } from "react-icons/fa";
 import { BsSendFill } from "react-icons/bs";
 import { BiSearch } from "react-icons/bi";
@@ -105,6 +107,75 @@ const Home = () => {
   const navigate = useNavigate();
 
 
+  // xử lý emoji
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  // Hàm xử lý khi chọn emoji
+  const handleEmojiClick = (emojiObject) => {
+    setNewMessage((prev) => prev + emojiObject.emoji);
+  };
+  //Xử lý gửi hình ảnh
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+  
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      formData.append("chatId", currentChat.chatId);
+      formData.append("sender", uid);
+  
+      const response = await fetch("http://localhost:8080/api/messages/image", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+  
+      if (!response.ok) {
+        throw new Error("Không thể gửi ảnh");
+      }
+  
+      const data = await response.json();
+      setMessages((prevMessages) => [...prevMessages, data]);
+      alert("Ảnh đã được gửi thành công!");
+    } catch (err) {
+      console.error("Lỗi khi gửi ảnh:", err);
+      alert("Không thể gửi ảnh, vui lòng thử lại.");
+    }
+  };
+
+  //Xử lý gửi file
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+  
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("chatId", currentChat.chatId);
+      formData.append("sender", uid);
+  
+      const response = await fetch("http://localhost:8080/api/messages/file", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+  
+      if (!response.ok) {
+        throw new Error("Không thể gửi file");
+      }
+  
+      const data = await response.json();
+      setMessages((prevMessages) => [...prevMessages, data]);
+      alert("File đã được gửi thành công!");
+    } catch (err) {
+      console.error("Lỗi khi gửi file:", err);
+      alert("Không thể gửi file, vui lòng thử lại.");
+    }
+  };
   // Video call states
   const [isVideoCall, setIsVideoCall] = useState(false);
   const [localStream, setLocalStream] = useState(null);
@@ -1078,15 +1149,33 @@ const Home = () => {
                             hasError ? "error" : ""
                           }`}
                         >
-                          <div className="msg">
-                            {msg.message || msg.text || "Không có nội dung"}
-                            {isPending && (
-                              <span className="status-indicator">⏳</span>
-                            )}
-                            {hasError && (
-                              <span className="status-indicator">❌</span>
-                            )}
-                          </div>
+                         <div className="msg">
+                          {/* Hiển thị ảnh nếu có */}
+                          {msg.imageUrl ? (
+                            <img
+                              src={msg.imageUrl}
+                              alt="Sent"
+                              className="sent-image"
+                              onError={(e) => {
+                                e.target.src = "/default-image.png";
+                              }}
+                            />
+                          ) : msg.fileUrl ? (
+                            // Hiển thị file nếu có
+                            <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer">
+                              📄 {msg.fileName || "Tải xuống file"}
+                            </a>
+                          ) : (
+                            // Hiển thị nội dung văn bản nếu không có ảnh hoặc file
+                            msg.message || msg.text || "Không có nội dung"
+                          )}
+
+                          {/* Hiển thị trạng thái đang gửi */}
+                          {isPending && <span className="status-indicator">⏳</span>}
+
+                          {/* Hiển thị trạng thái lỗi */}
+                          {hasError && <span className="status-indicator">❌</span>}
+                        </div>
                           <div className="message-time">
                             {msg.timestamp
                               ? (() => {
@@ -1132,6 +1221,44 @@ const Home = () => {
                       if (e.key === "Enter") handleSendMessage();
                     }}
                   />
+                    {/* Emoji Picker */}
+                  <button
+                    className="emoji-btn"
+                    title="Chọn emoji"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  >
+                    <FaSmile size={30} />
+                  </button>
+                  {showEmojiPicker && (
+                    <div className="emoji-picker">
+                      <EmojiPicker onEmojiClick={handleEmojiClick} />
+                    </div>
+                  )}
+
+                  {/* File Upload */}
+                  <label htmlFor="file-upload" className="file-upload-label">
+                    <FaFileAlt size={30}/>
+                  </label>
+                  <input
+                    type="file"
+                    id="file-upload"
+                    className="file-upload-input"
+                    onChange={handleFileUpload}
+                  />
+
+                  {/* Image Upload */}
+                <label htmlFor="image-upload" className="image-upload-label">
+                  <FaImage size={30} />
+                </label>
+                <input
+                  type="file"
+                  id="image-upload"
+                  className="image-upload-input"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                />
+
+                  {/* Button Send */}
                   <button
                     className="send-btn"
                     onClick={handleSendMessage}
