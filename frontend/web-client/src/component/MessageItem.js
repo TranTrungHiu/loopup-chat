@@ -9,9 +9,215 @@ import {
   FaFilePdf, 
   FaFileWord, 
   FaFileExcel, 
-  FaFilePowerpoint
+  FaFilePowerpoint,
+  FaFileVideo,
+  FaFileAudio,
+  FaFileArchive,
+  FaFileCode,
+  FaTimes,
+  FaPlay,
+  FaExpand
 } from "react-icons/fa";
 import "../pages/styles/MessageItem.css";
+
+// Xử lý hiển thị icon cho các loại file khác nhau
+const getFileIcon = (fileName) => {
+  if (!fileName) return <FaFile />;
+  
+  const extension = fileName.split('.').pop().toLowerCase();
+  
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(extension)) {
+    return <FaFileImage />;
+  } else if (['mp4', 'webm', 'mkv', 'avi', 'mov'].includes(extension)) {
+    return <FaFileVideo />;
+  } else if (['mp3', 'wav', 'ogg', 'aac'].includes(extension)) {
+    return <FaFileAudio />;
+  } else if (extension === 'pdf') {
+    return <FaFilePdf />;
+  } else if (['doc', 'docx'].includes(extension)) {
+    return <FaFileWord />;
+  } else if (['xls', 'xlsx'].includes(extension)) {
+    return <FaFileExcel />;
+  } else if (['ppt', 'pptx'].includes(extension)) {
+    return <FaFilePowerpoint />;
+  } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) {
+    return <FaFileArchive />;
+  } else if (['js', 'html', 'css', 'java', 'py', 'c', 'cpp', 'php'].includes(extension)) {
+    return <FaFileCode />;
+  } else {
+    return <FaFile />;
+  }
+};
+
+// Modal component để hiển thị xem trước media
+const MediaViewerModal = ({ media, onClose }) => {
+  const [loading, setLoading] = useState(true);
+  
+  // Sử dụng useEffect để xử lý file không thể xem trước
+  useEffect(() => {
+    if (media) {
+      const { url, type, fileName } = media;
+      const mediaType = type || getMediaTypeFromUrl(url, fileName);
+      
+      // Nếu là loại file không thể xem trước, đặt loading = false ngay lập tức
+      if (mediaType !== 'image' && mediaType !== 'video' && mediaType !== 'pdf' && mediaType !== 'audio') {
+        setLoading(false);
+      }
+    }
+  }, [media]);
+
+  // Xử lý loại media khác nhau
+  const renderMediaContent = () => {
+    if (!media) return null;
+
+    // Xác định loại media dựa trên URL hoặc loại được chỉ định
+    const { url, type, fileName } = media;
+    
+    // Loại file từ phần mở rộng nếu không có type được chỉ định
+    const mediaType = type || getMediaTypeFromUrl(url, fileName);
+    
+    // Hiển thị nội dung dựa trên loại media
+    switch (mediaType) {
+      case 'image':
+        return (
+          <img 
+            src={url} 
+            alt={fileName || "Hình ảnh"} 
+            className="modal-media-image" 
+            onLoad={() => setLoading(false)}
+            onError={() => setLoading(false)}
+          />
+        );
+        
+      case 'video':
+        return (
+          <video 
+            src={url} 
+            className="modal-media-video" 
+            controls 
+            autoPlay={false}
+            onLoadedData={() => setLoading(false)}
+            onError={() => setLoading(false)}
+          >
+            Trình duyệt không hỗ trợ video.
+          </video>
+        );
+        
+      case 'pdf':
+        return (
+          <div className="modal-media-document">
+            <iframe 
+              src={`${url}#toolbar=0&navpanes=0`} 
+              title={fileName || "PDF Document"}
+              className="pdf-viewer"
+              onLoad={() => setLoading(false)}
+              onError={() => setLoading(false)}
+            />
+            <div className="document-actions">
+              <a href={url} target="_blank" rel="noopener noreferrer" className="action-button">
+                <FaExpand /> Mở rộng
+              </a>
+              <a href={url} download={fileName} className="action-button">
+                <FaDownload /> Tải xuống
+              </a>
+            </div>
+          </div>
+        );
+        
+      case 'audio':
+        return (
+          <div className="modal-media-audio">
+            <audio 
+              src={url} 
+              controls 
+              className="audio-player"
+              onLoadedData={() => setLoading(false)}
+              onError={() => setLoading(false)}
+            >
+              Trình duyệt không hỗ trợ audio.
+            </audio>
+            <div className="audio-info">
+              <p>{fileName || "Tệp âm thanh"}</p>
+              <a href={url} download={fileName} className="action-button">
+                <FaDownload /> Tải xuống
+              </a>
+            </div>
+          </div>
+        );
+        
+      default:
+        // Cho các loại file khác, hiển thị thông tin và nút tải xuống
+        // Không gọi setLoading(false) ở đây, đã được xử lý trong useEffect
+        return (
+          <div className="modal-media-file">
+            <div className="file-icon large">
+              {getFileIcon(fileName || url)}
+            </div>
+            <div className="file-info">
+              <h3>{fileName || "Tệp không xác định"}</h3>
+              <p>Không thể xem trước loại tệp này.</p>
+            </div>
+            <div className="document-actions">
+              <a href={url} download={fileName} className="action-button">
+                <FaDownload /> Tải xuống
+              </a>
+            </div>
+          </div>
+        );
+    }
+  };
+  
+  // Hàm xác định loại media từ URL hoặc tên file
+  const getMediaTypeFromUrl = (url, fileName) => {
+    if (!url) return 'unknown';
+    
+    // Lấy phần mở rộng từ fileName hoặc url
+    let extension = '';
+    if (fileName && fileName.includes('.')) {
+      extension = fileName.split('.').pop().toLowerCase();
+    } else {
+      const urlParts = url.split('?')[0].split('.');
+      if (urlParts.length > 1) {
+        extension = urlParts.pop().toLowerCase();
+      }
+    }
+    
+    // Xác định loại dựa trên phần mở rộng
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension)) {
+      return 'image';
+    } else if (['mp4', 'webm', 'ogg', 'mov', 'avi'].includes(extension)) {
+      return 'video';
+    } else if (['pdf'].includes(extension)) {
+      return 'pdf';
+    } else if (['doc', 'docx'].includes(extension)) {
+      return 'document';
+    } else if (['xls', 'xlsx'].includes(extension)) {
+      return 'spreadsheet';
+    } else if (['ppt', 'pptx'].includes(extension)) {
+      return 'presentation';
+    } else if (['mp3', 'wav', 'ogg', 'aac'].includes(extension)) {
+      return 'audio';
+    } else {
+      return 'unknown';
+    }
+  };
+
+  return (
+    <div className="media-modal-overlay" onClick={onClose}>
+      <div className="media-modal-content" onClick={e => e.stopPropagation()}>
+        <button className="media-modal-close" onClick={onClose}>
+          <FaTimes />
+        </button>
+        
+        {loading && <div className="media-loading-spinner">Đang tải...</div>}
+        
+        <div className={`media-content-container ${loading ? 'loading' : ''}`}>
+          {renderMediaContent()}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const MessageItem = ({ 
   message, 
@@ -23,6 +229,7 @@ const MessageItem = ({
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
+  const [viewingMedia, setViewingMedia] = useState(null);
 
   useEffect(() => {
     // Debug: Log tin nhắn để hiểu cấu trúc khi gặp vấn đề
@@ -36,27 +243,6 @@ const MessageItem = ({
   
   // Kiểm tra xem tin nhắn này có cần hiển thị tên người gửi không
   const shouldShowSender = showAvatar && !isCurrentUser && participant;
-  
-  // Xử lý hiển thị icon cho các loại file khác nhau
-  const getFileIcon = (fileName) => {
-    if (!fileName) return <FaFile />;
-    
-    const extension = fileName.split('.').pop().toLowerCase();
-    
-    if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(extension)) {
-      return <FaFileImage />;
-    } else if (extension === 'pdf') {
-      return <FaFilePdf />;
-    } else if (['doc', 'docx'].includes(extension)) {
-      return <FaFileWord />;
-    } else if (['xls', 'xlsx'].includes(extension)) {
-      return <FaFileExcel />;
-    } else if (['ppt', 'pptx'].includes(extension)) {
-      return <FaFilePowerpoint />;
-    } else {
-      return <FaFile />;
-    }
-  };
   
   // Improved timestamp formatting function
   const formatTime = (timestamp) => {
@@ -141,6 +327,15 @@ const MessageItem = ({
     );
   };
 
+  // Function to handle opening the media viewer
+  const openMediaViewer = (mediaUrl, mediaType, fileName) => {
+    setViewingMedia({
+      url: mediaUrl,
+      type: mediaType,
+      fileName: fileName
+    });
+  };
+
   // Helper function to safely display message content
   const renderMessageContent = () => {
     // Nếu tin nhắn không tồn tại
@@ -148,16 +343,22 @@ const MessageItem = ({
       return 'No message data';
     }
     
-    // Nếu là tin nhắn hình ảnh
-    if (message.type === 'image') {
+    // Hỗ trợ các định dạng media
+    // Ưu tiên kiểm tra trường mediaType từ backend mới
+    if (message.mediaType === 'image' || message.type === 'image' || 
+        (message.mediaUrl && message.mediaUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i))) {
+      const mediaUrl = message.mediaUrl || message.content || message.url || message.imageUrl;
+      const fileName = message.fileName || "image";
+      
       return (
         <div className="message-bubble message-image-container">
           <img
             className="message-image"
-            src={message.content || message.url || message.imageUrl}
-            alt="Hình ảnh"
+            src={mediaUrl}
+            alt={fileName}
             onLoad={() => setImageLoaded(true)}
             style={{ display: imageLoaded ? 'block' : 'none' }}
+            onClick={() => openMediaViewer(mediaUrl, 'image', fileName)}
           />
           {!imageLoaded && <div className="image-loader">Đang tải...</div>}
           
@@ -170,29 +371,62 @@ const MessageItem = ({
       );
     }
     
-    // Nếu là tin nhắn file
-    if (message.type === 'file') {
+    // Trường hợp là video
+    if (message.mediaType === 'video' || message.type === 'video' ||
+        (message.mediaUrl && message.mediaUrl.match(/\.(mp4|webm|ogg|mov|avi)$/i))) {
+      const mediaUrl = message.mediaUrl || message.content || message.url || message.videoUrl;
+      const fileName = message.fileName || "video";
+      
       return (
-        <div className="message-bubble">
-          <div className="message-file">
-            <div className="file-icon">
-              {getFileIcon(message.fileName)}
+        <div className="message-bubble message-video-container">
+          <div className="video-thumbnail" onClick={() => openMediaViewer(mediaUrl, 'video', fileName)}>
+            {/* Video thumbnail với overlay nút play */}
+            <div className="video-play-button">
+              <FaPlay />
             </div>
-            <div className="file-info">
-              <div className="file-name">{message.fileName || "File"}</div>
-              <div className="file-size">{message.fileSize || ""}</div>
+            <div className="video-info">
+              <span className="video-filename">{fileName}</span>
             </div>
-            <a 
-              href={message.content || message.url || message.fileUrl} 
-              download={message.fileName || "file"}
-              className="file-download"
-              title="Tải xuống"
-            >
-              <FaDownload />
-            </a>
           </div>
           
-          {/* Hiển thị thời gian bên trong bubble tin nhắn file */}
+          {/* Hiển thị thời gian bên trong bubble tin nhắn video */}
+          <div className={`message-time-container-inside ${isCurrentUser ? 'user' : 'other'}`}>
+            <span className="message-time">{formatTime(message.timestamp || message.createdAt || message.date)}</span>
+            {isCurrentUser && renderMessageStatus()}
+          </div>
+        </div>
+      );
+    }
+    
+    // Trường hợp là tài liệu
+    if (message.mediaType === 'document' || message.type === 'document' || message.type === 'file' ||
+        (message.mediaUrl && message.fileName)) {
+      const mediaUrl = message.mediaUrl || message.content || message.url || message.fileUrl;
+      const fileName = message.fileName || "file";
+      
+      return (
+        <div className="message-bubble message-document-container">
+          <div 
+            className="document-item" 
+            onClick={() => openMediaViewer(mediaUrl, message.mediaType || 'document', fileName)}
+          >
+            <div className="document-icon">
+              {getFileIcon(fileName)}
+            </div>
+            <div className="document-info">
+              <div className="document-name">{fileName}</div>
+              <div className="document-size">
+                {message.fileSize 
+                  ? formatFileSize(parseInt(message.fileSize)) 
+                  : ""}
+              </div>
+            </div>
+            <div className="document-action">
+              <FaDownload />
+            </div>
+          </div>
+          
+          {/* Hiển thị thời gian bên trong bubble tin nhắn tài liệu */}
           <div className={`message-time-container-inside ${isCurrentUser ? 'user' : 'other'}`}>
             <span className="message-time">{formatTime(message.timestamp || message.createdAt || message.date)}</span>
             {isCurrentUser && renderMessageStatus()}
@@ -290,6 +524,22 @@ const MessageItem = ({
       </div>
     );
   };
+  
+  // Format file size
+  const formatFileSize = (bytes) => {
+    if (!bytes || isNaN(bytes)) return "";
+    
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let size = bytes;
+    let unitIndex = 0;
+    
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+    
+    return `${size.toFixed(1)} ${units[unitIndex]}`;
+  };
 
   // Get appropriate avatar for the participant
   const getAvatar = () => {
@@ -323,27 +573,37 @@ const MessageItem = ({
   };
 
   return (
-    <div className={`message-item ${isCurrentUser ? 'user' : 'other'}`}>
-      {/* Avatar của người gửi */}
-      {shouldShowAvatar && (
-        <div className="message-avatar-container">
-          {getAvatar()}
-        </div>
-      )}
-
-      {/* Container nội dung tin nhắn */}
-      <div className={`message-container ${!shouldShowAvatar && !isCurrentUser ? 'no-avatar' : ''}`}>
-        {/* Tên người gửi */}
-        {shouldShowSender && participant && (
-          <div className="message-sender">
-            {participant.firstName} {participant.lastName}
+    <>
+      <div className={`message-item ${isCurrentUser ? 'user' : 'other'}`}>
+        {/* Avatar của người gửi */}
+        {shouldShowAvatar && (
+          <div className="message-avatar-container">
+            {getAvatar()}
           </div>
         )}
 
-        {/* Nội dung tin nhắn */}
-        {renderMessageContent()}
+        {/* Container nội dung tin nhắn */}
+        <div className={`message-container ${!shouldShowAvatar && !isCurrentUser ? 'no-avatar' : ''}`}>
+          {/* Tên người gửi */}
+          {shouldShowSender && participant && (
+            <div className="message-sender">
+              {participant.firstName} {participant.lastName}
+            </div>
+          )}
+
+          {/* Nội dung tin nhắn */}
+          {renderMessageContent()}
+        </div>
       </div>
-    </div>
+      
+      {/* Modal xem trước media */}
+      {viewingMedia && (
+        <MediaViewerModal 
+          media={viewingMedia} 
+          onClose={() => setViewingMedia(null)}
+        />
+      )}
+    </>
   );
 };
 

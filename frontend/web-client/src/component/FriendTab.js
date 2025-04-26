@@ -1,8 +1,7 @@
 "use client"
 const FriendTab= ({uid})=>{
     console.log("uid friendTab: "+uid)
-    return
-    (
+    return (
         <div>FriendTab</div>
     )
 }

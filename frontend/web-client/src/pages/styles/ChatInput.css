@@ -16,6 +16,12 @@
   padding: 10px;
   z-index: 10;
   transition: all 0.2s ease;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .attach-btn {
@@ -40,8 +46,56 @@
   color: #4CAF50;
 }
 
+.video-btn {
+  color: #FF5722;
+}
+
+.document-btn {
+  color: #2196F3;
+}
+
 .file-btn {
   color: #2196F3;
+}
+
+.close-btn {
+  color: #F44336;
+}
+
+.attach-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Thanh tiến trình upload */
+.upload-progress-container {
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background-color: #f0f0f0;
+  overflow: hidden;
+  z-index: 5;
+}
+
+.upload-progress-bar {
+  height: 100%;
+  background: linear-gradient(to right, #5E259A, #8843db);
+  transition: width 0.3s ease;
+}
+
+.upload-progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #5E259A;
+  font-size: 10px;
+  font-weight: bold;
+  white-space: nowrap;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
 }
 
 .input-area {
@@ -71,6 +125,11 @@
   color: #333;
 }
 
+.emoji-btn:disabled, .attach-toggle-btn:disabled, .send-btn:disabled, .voice-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .message-input {
   flex: 1;
   border: none;
@@ -87,6 +146,12 @@
 
 .message-input::placeholder {
   color: #aaa;
+}
+
+.message-input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background-color: rgba(0, 0, 0, 0.03);
 }
 
 .send-btn {
@@ -116,5 +181,15 @@
   .emoji-btn, .attach-toggle-btn, .send-btn, .voice-btn {
     width: 28px;
     height: 28px;
+  }
+  
+  .attach-menu {
+    right: 20px;
+  }
+  
+  .attach-btn {
+    width: 36px;
+    height: 36px;
+    margin: 0 3px;
   }
 }

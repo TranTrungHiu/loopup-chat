@@ -8,11 +8,23 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.firebase.cloud.FirestoreClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.amazonaws.HttpMethod;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+
+import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -26,10 +38,25 @@ import java.util.UUID;
 public class MessageController {
 
     private final SocketIOServer socketIOServer;
+    private final AmazonS3 s3Client;
+    private final String bucketName;
 
-    // Tiêm SocketIOServer thông qua constructor
-    public MessageController(SocketIOServer socketIOServer) {
+    // Tiêm SocketIOServer và cấu hình S3 thông qua constructor
+    public MessageController(
+            SocketIOServer socketIOServer,
+            @Value("${aws.access-key}") String accessKey,
+            @Value("${aws.secret-key}") String secretKey,
+            @Value("${aws.region}") String region,
+            @Value("${aws.bucket-name}") String bucketName) {
         this.socketIOServer = socketIOServer;
+        this.bucketName = bucketName;
+
+        // Cấu hình S3 client
+        this.s3Client = AmazonS3ClientBuilder.standard()
+                .withCredentials(new AWSStaticCredentialsProvider(
+                        new BasicAWSCredentials(accessKey, secretKey)))
+                .withRegion(region)
+                .build();
     }
 
     @PostMapping
@@ -37,13 +64,15 @@ public class MessageController {
         String chatId = request.get("chatId");
         String sender = request.get("sender");
         String message = request.get("message");
+        String mediaUrl = request.get("mediaUrl"); // Thêm trường để hỗ trợ media
+        String mediaType = request.get("mediaType"); // image, video, document
 
         Firestore firestore = FirestoreClient.getFirestore();
         CollectionReference messagesRef = firestore.collection("messages");
         DocumentReference chatRef = firestore.collection("chats").document(chatId);
 
         try {
-            if (chatId == null || sender == null || message == null) {
+            if (chatId == null || sender == null || (message == null && mediaUrl == null)) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("message", "Dữ liệu không hợp lệ"));
             }
@@ -56,12 +85,24 @@ public class MessageController {
                 chatData.put("chatId", chatId);
                 String[] participants = chatId.split("_");
                 chatData.put("participants", Arrays.asList(participants[0], participants[1]));
-                chatData.put("lastMessage", message);
+
+                // Đặt lastMessage dựa trên loại nội dung
+                String lastMessageText = message;
+                if (mediaUrl != null && mediaType != null) {
+                    lastMessageText = "[" + getMediaTypeDisplay(mediaType) + "]";
+                }
+
+                chatData.put("lastMessage", lastMessageText);
                 chatData.put("lastUpdated", new Date());
                 chatRef.set(chatData);
             } else {
                 // Nếu đoạn chat đã tồn tại, cập nhật thông tin đoạn chat
-                chatRef.update("lastMessage", message, "lastUpdated", new Date());
+                String lastMessageText = message;
+                if (mediaUrl != null && mediaType != null) {
+                    lastMessageText = "[" + getMediaTypeDisplay(mediaType) + "]";
+                }
+
+                chatRef.update("lastMessage", lastMessageText, "lastUpdated", new Date());
             }
 
             // Generate unique message ID
@@ -73,7 +114,26 @@ public class MessageController {
             messageData.put("id", messageId);
             messageData.put("chatId", chatId);
             messageData.put("sender", sender);
-            messageData.put("message", message);
+
+            // Thêm thông tin về text hoặc media
+            if (message != null && !message.trim().isEmpty()) {
+                messageData.put("message", message);
+            }
+
+            if (mediaUrl != null && mediaType != null) {
+                messageData.put("mediaUrl", mediaUrl);
+                messageData.put("mediaType", mediaType);
+
+                // Thêm các thông tin bổ sung cho media
+                if (request.containsKey("fileName")) {
+                    messageData.put("fileName", request.get("fileName"));
+                }
+
+                if (request.containsKey("fileSize")) {
+                    messageData.put("fileSize", request.get("fileSize"));
+                }
+            }
+
             messageData.put("timestamp", timestamp);
             messageData.put("status", "sent");
 
@@ -90,11 +150,17 @@ public class MessageController {
 
             // Thông báo cập nhật danh sách chat cho tất cả người tham gia
             String[] participants = chatId.split("_");
+            String lastMessageText = message;
+
+            if (mediaUrl != null && mediaType != null) {
+                lastMessageText = "[" + getMediaTypeDisplay(mediaType) + "]";
+            }
+
             for (String participant : participants) {
                 socketIOServer.getRoomOperations("user_" + participant).sendEvent("chat_updated",
                         Map.of(
                                 "chatId", chatId,
-                                "lastMessage", message,
+                                "lastMessage", lastMessageText,
                                 "lastUpdated", timestamp));
             }
 
@@ -103,6 +169,211 @@ public class MessageController {
             e.printStackTrace(); // Log lỗi chi tiết
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Lỗi khi gửi tin nhắn: " + e.getMessage()));
+        }
+    }
+
+    // Helper method để hiển thị loại media
+    private String getMediaTypeDisplay(String mediaType) {
+        switch (mediaType) {
+            case "image":
+                return "Hình ảnh";
+            case "video":
+                return "Video";
+            case "document":
+                return "Tài liệu";
+            default:
+                return "File đính kèm";
+        }
+    }
+
+    // Các phương thức hiện tại
+    // ...existing code...
+
+    /**
+     * Tạo presigned URL để upload trực tiếp media lên S3 từ client
+     * 
+     * @param fileInfo thông tin về file cần upload
+     * @return URL đã ký để upload
+     */
+    @PostMapping("/generate-upload-url")
+    public ResponseEntity<?> generateUploadUrl(@RequestBody Map<String, String> fileInfo) {
+        try {
+            String fileName = fileInfo.get("fileName");
+            String contentType = fileInfo.get("contentType");
+            String fileExtension = fileInfo.get("fileExtension");
+
+            if (fileName == null || contentType == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Thiếu thông tin file"));
+            }
+
+            // Tạo tên file duy nhất để tránh ghi đè
+            String uniqueFileName = UUID.randomUUID().toString();
+
+            // Nếu có định dạng file, thêm vào tên file
+            if (fileExtension != null && !fileExtension.isEmpty()) {
+                uniqueFileName += "." + fileExtension;
+            }
+
+            // Tạo prefixed path dựa vào loại file (organize files)
+            String filePrefix = "media/";
+            if (contentType.startsWith("image/")) {
+                filePrefix += "images/";
+            } else if (contentType.startsWith("video/")) {
+                filePrefix += "videos/";
+            } else if (contentType.startsWith("audio/")) {
+                filePrefix += "audios/";
+            } else {
+                filePrefix += "documents/";
+            }
+
+            String s3ObjectKey = filePrefix + uniqueFileName;
+
+            // Thiết lập các metadata cho object
+            ObjectMetadata metadata = new ObjectMetadata();
+            metadata.setContentType(contentType);
+            metadata.addUserMetadata("originalFileName", fileName);
+
+            // Tạo presigned URL với thời hạn 15 phút để upload
+            Date expiration = new Date();
+            long expTimeMillis = expiration.getTime();
+            expTimeMillis += 1000 * 60 * 15; // 15 phút
+            expiration.setTime(expTimeMillis);
+
+            GeneratePresignedUrlRequest presignedUrlRequest = new GeneratePresignedUrlRequest(bucketName, s3ObjectKey)
+                    .withMethod(HttpMethod.PUT)
+                    .withExpiration(expiration);
+            presignedUrlRequest.setContentType(contentType);
+
+            URL presignedUrl = s3Client.generatePresignedUrl(presignedUrlRequest);
+
+            // Trả về URL để upload và URL để truy cập sau khi upload
+            String downloadUrl = s3Client.getUrl(bucketName, s3ObjectKey).toString();
+
+            Map<String, String> result = new HashMap<>();
+            result.put("uploadUrl", presignedUrl.toString());
+            result.put("downloadUrl", downloadUrl);
+            result.put("objectKey", s3ObjectKey);
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Lỗi khi tạo URL upload: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * API để trực tiếp upload file từ server (thay thế cho upload từ client)
+     */
+    @PostMapping("/upload-media")
+    public ResponseEntity<?> uploadMedia(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("chatId") String chatId,
+            @RequestParam("sender") String sender,
+            @RequestParam("mediaType") String mediaType) {
+
+        try {
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "File trống"));
+            }
+
+            // Tạo tên file duy nhất
+            String originalFileName = file.getOriginalFilename();
+            String fileExtension = "";
+            if (originalFileName != null && originalFileName.contains(".")) {
+                fileExtension = originalFileName.substring(originalFileName.lastIndexOf(".") + 1);
+            }
+
+            String uniqueFileName = UUID.randomUUID().toString();
+            if (!fileExtension.isEmpty()) {
+                uniqueFileName += "." + fileExtension;
+            }
+
+            // Tạo prefix cho file dựa vào loại
+            String filePrefix = "media/";
+            if (mediaType.equals("image")) {
+                filePrefix += "images/";
+            } else if (mediaType.equals("video")) {
+                filePrefix += "videos/";
+            } else {
+                filePrefix += "documents/";
+            }
+
+            String s3ObjectKey = filePrefix + uniqueFileName;
+
+            // Thiết lập metadata
+            ObjectMetadata metadata = new ObjectMetadata();
+            metadata.setContentLength(file.getSize());
+            metadata.setContentType(file.getContentType());
+            metadata.addUserMetadata("originalFileName", originalFileName);
+
+            // Upload file lên S3
+            PutObjectRequest putObjectRequest = new PutObjectRequest(
+                    bucketName,
+                    s3ObjectKey,
+                    file.getInputStream(),
+                    metadata);
+
+            s3Client.putObject(putObjectRequest);
+
+            // Lấy URL của file đã upload
+            String fileUrl = s3Client.getUrl(bucketName, s3ObjectKey).toString();
+
+            // Tạo message với media
+            Map<String, String> messageRequest = new HashMap<>();
+            messageRequest.put("chatId", chatId);
+            messageRequest.put("sender", sender);
+            messageRequest.put("mediaUrl", fileUrl);
+            messageRequest.put("mediaType", mediaType);
+            messageRequest.put("fileName", originalFileName);
+            messageRequest.put("fileSize", String.valueOf(file.getSize()));
+
+            // Gửi message
+            return sendMessage(messageRequest);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Lỗi khi upload file: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Lấy thông tin file
+     */
+    @GetMapping("/media-info/{objectKey}")
+    public ResponseEntity<?> getMediaInfo(@PathVariable String objectKey) {
+        try {
+            // Decode object key if it was URL encoded
+            objectKey = java.net.URLDecoder.decode(objectKey, "UTF-8");
+
+            if (!s3Client.doesObjectExist(bucketName, objectKey)) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Tạo signed URL với thời hạn truy cập
+            Date expiration = new Date();
+            long expTimeMillis = expiration.getTime();
+            expTimeMillis += 1000 * 60 * 60; // 1 giờ
+            expiration.setTime(expTimeMillis);
+
+            GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucketName,
+                    objectKey)
+                    .withMethod(HttpMethod.GET)
+                    .withExpiration(expiration);
+
+            URL url = s3Client.generatePresignedUrl(generatePresignedUrlRequest);
+
+            Map<String, String> result = new HashMap<>();
+            result.put("url", url.toString());
+            result.put("objectKey", objectKey);
+
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Lỗi khi lấy thông tin file: " + e.getMessage()));
         }
     }
 

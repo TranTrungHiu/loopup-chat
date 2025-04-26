@@ -129,25 +129,29 @@ const Home = () => {
 
     try {
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("file", file);
       formData.append("chatId", currentChat.chatId);
       formData.append("sender", uid);
+      formData.append("mediaType", "image");
 
-      const response = await fetch("http://localhost:8080/api/messages/image", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
+      const response = await fetch(
+        "http://localhost:8080/api/messages/upload-media",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Không thể gửi ảnh");
       }
 
       const data = await response.json();
-      setMessages((prevMessages) => [...prevMessages, data]);
-      alert("Ảnh đã được gửi thành công!");
+      console.log("Ảnh đã được gửi thành công:", data);
+      // Tin nhắn sẽ được cập nhật thông qua Socket.IO, không cần thêm vào state
     } catch (err) {
       console.error("Lỗi khi gửi ảnh:", err);
       alert("Không thể gửi ảnh, vui lòng thử lại.");
@@ -160,29 +164,58 @@ const Home = () => {
     if (!file) return;
 
     try {
+      // Kiểm tra kích thước file (giới hạn 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+      if (file.size > maxSize) {
+        toast.error(`File quá lớn. Giới hạn tối đa là 10MB.`);
+        return;
+      }
+
+      // Lấy phần mở rộng của file
+      const extension = file.name.split('.').pop().toLowerCase();
+      
+      // Kiểm tra phần mở rộng file được hỗ trợ
+      const supportedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar'];
+      if (!supportedExtensions.includes(extension)) {
+        toast.warning(`Loại file ${extension} không được hỗ trợ. Hãy dùng: ${supportedExtensions.join(', ')}`);
+        return;
+      }
+
+      console.log(`Bắt đầu tải lên file: ${file.name} (${file.type}), kích thước: ${file.size} bytes`);
+      toast.info(`Đang tải lên ${file.name}...`);
+
       const formData = new FormData();
       formData.append("file", file);
       formData.append("chatId", currentChat.chatId);
       formData.append("sender", uid);
+      formData.append("mediaType", "document");
+      // Thêm tên file và kích thước
+      formData.append("fileName", file.name);
+      formData.append("fileSize", file.size);
 
-      const response = await fetch("http://localhost:8080/api/messages/file", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
+      const response = await fetch(
+        "http://localhost:8080/api/messages/upload-media",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
-        throw new Error("Không thể gửi file");
+        const errorText = await response.text();
+        console.error("Server response:", response.status, errorText);
+        throw new Error(`Không thể gửi file: ${response.status} ${errorText || ''}`);
       }
 
       const data = await response.json();
-      setMessages((prevMessages) => [...prevMessages, data]);
-      alert("File đã được gửi thành công!");
+      console.log("File đã được gửi thành công:", data);
+      toast.success(`Đã gửi file ${file.name} thành công`);
     } catch (err) {
       console.error("Lỗi khi gửi file:", err);
-      alert("Không thể gửi file, vui lòng thử lại.");
+      toast.error(err.message || "Không thể gửi file, vui lòng thử lại.");
     }
   };
   // Video call states
@@ -1373,10 +1406,7 @@ const Home = () => {
             <div className="settings-menu">
               <button
                 className="settings-item account"
-                onClick={() => {
-                  setIsAccountModalOpen(true);
-                  setShowSettings(false);
-                }}
+                onClick={() => setIsAccountModalOpen(true)}
               >
                 <FaUser size={16} /> Tài khoản
               </button>
