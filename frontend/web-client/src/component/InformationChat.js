@@ -16,8 +16,10 @@ import {
     FaCircle
 } from "react-icons/fa";
 import GroupManagement from "./GroupManagement";
+import { Button } from '@mui/material';
+import axios from "axios";
 
-const InformationChat = ({ isGroupChat, isAdmin, user, chat, uid, onClose }) => {
+const InformationChat = ({ isGroupChat, isAdmin, user, chat, uid, onClose  }) => {
     console.log("InformationChat props:", { isGroupChat, isAdmin, user, chat, uid });
     const [showGroupManagement, setShowGroupManagement] = useState(false);
     const [animate, setAnimate] = useState(true);
@@ -70,6 +72,29 @@ const InformationChat = ({ isGroupChat, isAdmin, user, chat, uid, onClose }) => 
     if (showGroupManagement) {
         return <GroupManagement onBack={handleBack} isAdmin={isAdmin} chat={chat} uid={uid} />;
     }
+
+    //Xử lý rời nhóm
+    const handleLeaveGroup = async () => {
+        try {
+          const confirmed = window.confirm("Bạn có chắc chắn muốn rời khỏi nhóm này?");
+          if (!confirmed) return;
+      
+          const response = await axios.post(
+            `http://localhost:8080/api/chats/${chat.chatId}/leave-group`,
+            { userId: uid }
+          );
+      
+          alert(response.data.message);
+          console.log("Rời nhóm thành công:", response.data);
+      
+          if (onClose) onClose();
+          if (onLeftGroup) onLeftGroup();
+        } catch (error) {
+          console.error("Lỗi khi rời nhóm:", error);
+        }
+      };
+      
+      
 
     const fullName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
 
@@ -251,6 +276,15 @@ const InformationChat = ({ isGroupChat, isAdmin, user, chat, uid, onClose }) => 
                             </div>
                         </div>
                     </div>
+
+                    {isGroupChat && (
+                    <>
+                        <div className="separator"></div>
+                        <div className="leave-group-button-container">
+                            <Button variant="outlined" color="error" onClick={handleLeaveGroup}>Rời nhóm</Button>
+                        </div>
+                    </>
+                    )}
                 </div>
             </div>
         </div>

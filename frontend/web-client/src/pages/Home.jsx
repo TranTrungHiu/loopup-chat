@@ -1351,6 +1351,13 @@ const Home = () => {
     }
   }, [currentChat, uid, token, messages]);
 
+  //Xử lý sau khi rời nhóm chat
+  const handleLeaveCurrentChat = () => {
+    setCurrentChat(null); 
+    setTabs("");
+  };
+  
+
   return (
     <div className="chat-container">
       <div className="sidebar">
@@ -1813,6 +1820,8 @@ const Home = () => {
             isAdmin={currentChat?.adminId === uid}
             chat={currentChat} // Thêm prop chat
             uid={uid}
+            onClose={()=> setChatInfor(false)}
+            onLeftGroup={handleLeaveCurrentChat}
           />
         )}
         <Modal
