@@ -19,7 +19,6 @@ import {
   FaExpand
 } from "react-icons/fa";
 import "../pages/styles/MessageItem.css";
-import { fetchUserByUid } from "../services/chatService";
 
 // Xử lý hiển thị icon cho các loại file khác nhau
 const getFileIcon = (fileName) => {
@@ -119,7 +118,7 @@ const MediaViewerModal = ({ media, onClose }) => {
                 <FaExpand /> Mở rộng
               </a>
               <a href={url} download={fileName} className="action-button">
-                <FaDownload /> Tải xuống
+                <FaDownload /> DOWNLOAD
               </a>
             </div>
           </div>
@@ -140,7 +139,7 @@ const MediaViewerModal = ({ media, onClose }) => {
             <div className="audio-info">
               <p>{fileName || "Tệp âm thanh"}</p>
               <a href={url} download={fileName} className="action-button">
-                <FaDownload /> Tải xuống
+                <FaDownload /> DOWNLOAD
               </a>
             </div>
           </div>
@@ -160,7 +159,7 @@ const MediaViewerModal = ({ media, onClose }) => {
             </div>
             <div className="document-actions">
               <a href={url} download={fileName} className="action-button">
-                <FaDownload /> Tải xuống
+                <FaDownload /> DOWNLOAD
               </a>
             </div>
           </div>
@@ -233,29 +232,13 @@ const MessageItem = ({
   const [viewingMedia, setViewingMedia] = useState(null);
 
   useEffect(() => {
+    // Debug: Log tin nhắn để hiểu cấu trúc khi gặp vấn đề
     if (!message || !message.message) {
       console.log('Debugging message structure:', message);
     }
-
-    // Fetch sender info if the message is not from the current user
-    if (!isCurrentUser && message.sender) {
-      const fetchSender = async () => {
-        try {
-          const userData = await fetchUserByUid(message.sender, token);
-          setSenderInfo(userData);
-        } catch (err) {
-          console.error("Error fetching sender info:", err);
-          setSenderInfo({
-            firstName: "Người dùng",
-            lastName: "không xác định",
-            isDefault: true
-          });
-        }
-      };
-      fetchSender();
-    }
-  }, [message, isCurrentUser, token]);
-
+  }, [message]);
+  
+  // Kiểm tra xem tin nhắn này có cần hiển thị avatar không
   const shouldShowAvatar = showAvatar && !isCurrentUser;
   
   // Kiểm tra xem tin nhắn này có cần hiển thị tên người gửi không
@@ -264,26 +247,44 @@ const MessageItem = ({
   // Improved timestamp formatting function
   const formatTime = (timestamp) => {
     if (formattedTime) return formattedTime;
-    if (!timestamp) return '';
+    
+    // Handle different timestamp formats
+    let date;
+    
+    if (!timestamp) {
+      return '';
+    }
     
     try {
-      let date;
+      // If it's a number (unix timestamp in seconds), convert to milliseconds
       if (typeof timestamp === 'number') {
+        // Check if timestamp is in seconds (10 digits) and convert to milliseconds if needed
         const isInSeconds = timestamp.toString().length === 10;
         date = new Date(isInSeconds ? timestamp * 1000 : timestamp);
-      } else if (typeof timestamp === 'string') {
+      } 
+      // If it's a string, try to parse it
+      else if (typeof timestamp === 'string') {
+        // Try parsing as ISO string
         date = new Date(timestamp);
+        
+        // If invalid, try parsing as Firebase timestamp
         if (isNaN(date.getTime()) && timestamp.seconds) {
           date = new Date(timestamp.seconds * 1000);
         }
-      } else if (timestamp && timestamp.seconds) {
+      } 
+      // If it's a Firebase timestamp object with seconds and nanoseconds
+      else if (timestamp && timestamp.seconds) {
         date = new Date(timestamp.seconds * 1000);
-      } else if (timestamp instanceof Date) {
+      } 
+      // If it's already a Date object
+      else if (timestamp instanceof Date) {
         date = timestamp;
-      } else {
+      } 
+      else {
         date = new Date();
       }
       
+      // Check if the date is valid
       if (isNaN(date.getTime())) {
         console.warn('Invalid date format:', timestamp);
         return 'Just now';
@@ -299,12 +300,17 @@ const MessageItem = ({
     }
   };
   
+  // Trạng thái tin nhắn
   const renderMessageStatus = () => {
+    // Nếu tin nhắn đã được đọc bởi ít nhất một người khác
     if (message.readBy && Object.keys(message.readBy).length > 0) {
+      // Tìm những người đã đọc không phải người gửi
       const readersNotSender = Object.keys(message.readBy).filter(
         readerId => readerId !== message.sender
       );
-      if (readersNotSender.length > 0) { // Fixed the typo here
+      
+      // Nếu có người đã đọc (không phải người gửi)
+      if (readersNotSender.length > 0) {
         return (
           <span className="message-status-icon seen" title="Đã xem">
             <FaCheckCircle />
@@ -312,6 +318,8 @@ const MessageItem = ({
         );
       }
     }
+    
+    // Mặc định: đã gửi
     return (
       <span className="message-status-icon sent" title="Đã gửi">
         <FaCheck />
@@ -330,6 +338,7 @@ const MessageItem = ({
 
   // Helper function to safely display message content
   const renderMessageContent = () => {
+    // Nếu tin nhắn không tồn tại
     if (!message) {
       return 'No message data';
     }
@@ -352,6 +361,8 @@ const MessageItem = ({
             onClick={() => openMediaViewer(mediaUrl, 'image', fileName)}
           />
           {!imageLoaded && <div className="image-loader">Đang tải...</div>}
+          
+          {/* Hiển thị thời gian bên trong bubble tin nhắn hình ảnh */}
           <div className={`message-time-container-inside ${isCurrentUser ? 'user' : 'other'}`}>
             <span className="message-time">{formatTime(message.timestamp || message.createdAt || message.date)}</span>
             {isCurrentUser && renderMessageStatus()}
@@ -424,12 +435,16 @@ const MessageItem = ({
       );
     }
     
+    // Tin nhắn văn bản - trích xuất nội dung từ nhiều nguồn khác nhau
     let textContent = "";
+    
+    // Kiểm tra nội dung tin nhắn trực tiếp
     if (typeof message === 'string') {
       textContent = message;
     } else {
+      // Kiểm tra tất cả các trường có thể chứa nội dung tin nhắn
       if (message.message !== undefined && message.message !== null) {
-        textContent = String(message.message);
+        textContent = String(message.message); // Chuyển đổi thành string trong mọi trường hợp
       } else if (message.content) {
         textContent = String(message.content);
       } else if (message.text) {
@@ -439,10 +454,13 @@ const MessageItem = ({
       }
     }
     
+    // Nếu vẫn không có nội dung và bật chế độ debug
     if (!textContent && typeof message === 'object') {
       console.debug('Debug message structure:', Object.keys(message));
+      
+      // Tạo chuỗi chứa thông tin về tất cả các trường trong đối tượng tin nhắn
       const messageFields = Object.entries(message)
-        .filter(([key]) => key !== 'readBy')
+        .filter(([key]) => key !== 'readBy') // Loại bỏ trường readBy phức tạp
         .map(([key, value]) => {
           if (typeof value === 'object' && value !== null) {
             return `${key}: [Object]`;
@@ -463,6 +481,8 @@ const MessageItem = ({
                 Ẩn Debug
               </button>
             </div>
+            
+            {/* Hiển thị thời gian trong debug message */}
             <div className={`message-time-container-inside ${isCurrentUser ? 'user' : 'other'}`}>
               <span className="message-time">{formatTime(message.timestamp || message.createdAt || message.date)}</span>
               {isCurrentUser && renderMessageStatus()}
@@ -481,6 +501,8 @@ const MessageItem = ({
                 Hiển thị Debug
               </button>
             </div>
+            
+            {/* Hiển thị thời gian trong message không có nội dung */}
             <div className={`message-time-container-inside ${isCurrentUser ? 'user' : 'other'}`}>
               <span className="message-time">{formatTime(message.timestamp || message.createdAt || message.date)}</span>
               {isCurrentUser && renderMessageStatus()}
@@ -493,6 +515,8 @@ const MessageItem = ({
     return (
       <div className="message-bubble">
         <div className="message-text">{textContent}</div>
+        
+        {/* Hiển thị thời gian bên trong bubble tin nhắn văn bản */}
         <div className={`message-time-container-inside ${isCurrentUser ? 'user' : 'other'}`}>
           <span className="message-time">{formatTime(message.timestamp || message.createdAt || message.date)}</span>
           {isCurrentUser && renderMessageStatus()}
@@ -517,24 +541,27 @@ const MessageItem = ({
     return `${size.toFixed(1)} ${units[unitIndex]}`;
   };
 
+  // Get appropriate avatar for the participant
   const getAvatar = () => {
-    const displayParticipant = !isCurrentUser ? (senderInfo || participant) : null;
-    if (!displayParticipant) return null;
+    if (!participant) return null;
     
-    if (displayParticipant.avatarUrl) {
+    if (participant.avatarUrl) {
       return (
         <div 
           className="message-avatar" 
-          style={{ backgroundImage: `url(${displayParticipant.avatarUrl})` }}
+          style={{ backgroundImage: `url(${participant.avatarUrl})` }}
         />
       );
     }
     
-    const initial = displayParticipant.firstName?.charAt(0) || 
-                   displayParticipant.lastName?.charAt(0) || 
-                   '?';
-    const avatarColor = displayParticipant.avatarColor || 
+    // Use initial letter if no avatar
+    const initial = participant.firstName?.charAt(0) || 
+                    participant.lastName?.charAt(0) || 
+                    '?';
+                    
+    const avatarColor = participant.avatarColor || 
                        `hsl(${(initial.charCodeAt(0) * 10 % 360)}, 70%, 50%)`;
+                        
     return (
       <div 
         className="message-avatar" 

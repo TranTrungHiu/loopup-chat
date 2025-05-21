@@ -16,6 +16,11 @@ public class FriendController {
         String fromUserId = body.get("fromUserId");
         String toUserId = body.get("toUserId");
 
+        if (fromUserId == toUserId) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "không kết bạn với chính mình"));
+        }
+
         if (fromUserId == null || toUserId == null) {
             return ResponseEntity.badRequest()
                     .body(Map.of("message", "fromUserId và toUserId là bắt buộc"));

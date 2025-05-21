@@ -62,23 +62,37 @@ const ChatItem = ({ chat, participant, isActive, onSelect }) => {
     // Kiểm tra và lấy nội dung tin nhắn từ các trường khác nhau
     let messageContent = "";
     
-    // Kiểm tra tất cả các trường có thể chứa nội dung tin nhắn
-    if (typeof chat.lastMessage === 'string') {
+    // Xử lý trường hợp lastMessage là một mảng
+    if (Array.isArray(chat.lastMessage)) {
+      // Lấy phần tử cuối cùng trong mảng (tin nhắn mới nhất)
+      if (chat.lastMessage.length > 0) {
+        const lastMsg = chat.lastMessage[chat.lastMessage.length - 1];
+        
+        if (typeof lastMsg === 'string') {
+          messageContent = lastMsg;
+        } else if (lastMsg && typeof lastMsg === 'object') {
+          messageContent = lastMsg.text || lastMsg.content || lastMsg.message || '';
+          
+          // Kiểm tra loại của tin nhắn
+          if (lastMsg.type === "image") return "🖼️ Hình ảnh";
+          if (lastMsg.type === "file" || lastMsg.type === "document") {
+            return lastMsg.fileName ? `📎 ${lastMsg.fileName}` : "📎 Tệp đính kèm";
+          }
+        }
+      }
+    }
+    // Xử lý trường hợp lastMessage là một object
+    else if (typeof chat.lastMessage === 'object') {
+      messageContent = chat.lastMessage.text || chat.lastMessage.content || chat.lastMessage.message || '';
+    }
+    // Xử lý trường hợp lastMessage là string
+    else if (typeof chat.lastMessage === 'string') {
       messageContent = chat.lastMessage;
-    } else if (chat.lastMessage.text) {
-      messageContent = chat.lastMessage.text;
-    } else if (chat.lastMessage.content) {
-      messageContent = chat.lastMessage.content;
-    } else if (chat.lastMessage.message) {
-      messageContent = chat.lastMessage.message;
-    } else if (chat.lastMessageText) {
-      // Một số trường hợp lastMessage không có text/content, nhưng có lastMessageText ở mức chat
-      messageContent = chat.lastMessageText;
     }
     
-    // Debug thông tin
-    if (!messageContent && chat.lastMessage && typeof chat.lastMessage === 'object') {
-      console.log("Debug lastMessage:", Object.keys(chat.lastMessage));
+    // Sử dụng lastMessageText ở mức chat nếu vẫn không tìm thấy nội dung
+    if (!messageContent && chat.lastMessageText) {
+      messageContent = chat.lastMessageText;
     }
     
     // Nếu không tìm thấy nội dung tin nhắn
@@ -158,7 +172,7 @@ const ChatItem = ({ chat, participant, isActive, onSelect }) => {
             {/* Thêm tiền tố nếu là nhóm và không phải tin nhắn của người dùng hiện tại */}
             {isGroupChat && chat.lastMessage && !chat.lastMessage.isMine && !chat.lastMessage.isCurrentUser && (
               <span className="sender-prefix">
-                {chat.lastMessage.senderName?.split(' ')[0] || "Ai đó"}: 
+                {chat.lastMessage.senderName?.split(' ')[0]} 
               </span>
             )}
             {getLastMessagePreview()}

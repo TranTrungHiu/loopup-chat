@@ -605,23 +605,19 @@
   align-items: center;
   background-color: #5E259A;
   color: white;
-  padding: 8px 12px;
+  padding: 8px 8px;
   margin-left: 10px;
   border-radius: 4px;
   text-decoration: none;
   font-size: 14px;
   transition: all 0.2s;
+  width: auto;
 }
 
 .action-button:hover {
   background-color: #4b1e79;
   transform: translateY(-2px);
 }
-
-.action-button svg {
-  margin-right: 5px;
-}
-
 .modal-media-audio {
   width: 90%;
   max-width: 500px;

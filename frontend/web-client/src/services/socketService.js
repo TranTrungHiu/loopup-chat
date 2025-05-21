@@ -1,6 +1,9 @@
 import io from 'socket.io-client';
 
+// Export socket instance so it can be imported directly
 let socket;
+export { socket };
+
 let messageCallbacks = [];
 let chatUpdateCallbacks = [];
 let messageReadCallbacks = [];

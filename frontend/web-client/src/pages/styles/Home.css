@@ -340,7 +340,7 @@
 .emoji-picker-container {
   position: absolute;
   bottom: 80px;
-  right: 10px;
+  left: 320px;
   z-index: 100;
 }
 
@@ -474,14 +474,15 @@
 }
 
 .chat-header .user-name {
-  margin: 0;
   font-size: 16px;
   font-weight: 600;
+  color: white;
 }
 
 .chat-header .user-status {
   font-size: 12px;
   opacity: 0.8;
+  margin-left: 30px;
 }
 
 .chat-header .actions {
