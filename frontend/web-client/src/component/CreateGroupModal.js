@@ -5,7 +5,7 @@ import { socket } from "../services/socketService";
 import { FaUsers, FaSpinner } from "react-icons/fa";
 import { toast } from "react-toastify";
 
-const CreateGroupModal = ({ onClose, userId }) => {
+const CreateGroupModal = ({ onClose, userId, onGroupCreated }) => {
     const [groupName, setGroupName] = useState("");
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [friendList, setFriendList] = useState([]);
@@ -96,22 +96,39 @@ const CreateGroupModal = ({ onClose, userId }) => {
                 }),
             });
     
-            const data = await response.json();
-    
-            if (response.ok) {
+            const data = await response.json();            if (response.ok) {
+                console.log("✅ Group created successfully, response data:", data);
+                console.log("📋 Member IDs:", memberIds);
+                
                 // Gửi thông báo qua socket để cập nhật danh sách chat cho tất cả thành viên
                 if (socket && socket.connected) {
-                    console.log("Emit socket event: group_created");
+                    console.log("🔌 Socket is connected, emitting group_created event");
+                    console.log("📤 Emitting data:", {
+                        chat: data,
+                        memberIds: memberIds
+                    });
+                    
                     socket.emit('group_created', {
                         chat: data,
                         memberIds: memberIds
                     });
-                }
-
-                toast.success("Nhóm đã được tạo thành công!", {
+                    
+                    console.log("✅ group_created event emitted successfully");
+                } else {
+                    console.error("❌ Socket is not connected:", {
+                        socket: !!socket,
+                        connected: socket?.connected
+                    });
+                }toast.success("Nhóm đã được tạo thành công!", {
                     position: "top-right",
                     autoClose: 3000,
                 });
+                
+                // Call the callback to reload chats if provided
+                if (onGroupCreated) {
+                    onGroupCreated();
+                }
+                
                 onClose();
             } else {
                 toast.error("Lỗi khi tạo nhóm: " + (data.message || "Không rõ nguyên nhân"), {

@@ -9,6 +9,7 @@ const ChatList = ({
   error,
   currentChat,
   participantsInfo,
+  userStatuses,
   onChatSelect,
   onRetry,
   onFindFriend,

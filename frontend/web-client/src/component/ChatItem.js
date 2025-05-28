@@ -2,7 +2,7 @@ import React from "react";
 import { FaCheck, FaCheckDouble, FaUsers, FaVolumeMute } from "react-icons/fa";
 import "../pages/styles/ChatItem.css";
 
-const ChatItem = ({ chat, participant, isActive, onSelect }) => {
+const ChatItem = ({ chat, participant, userStatuses, isActive, onSelect }) => {
   // Kiểm tra xem có phải là nhóm hay không
   const isGroupChat = chat?.isGroupChat || false;
 

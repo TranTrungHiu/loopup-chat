@@ -99,13 +99,17 @@ public class SocketIOService {
             public void onData(SocketIOClient client, String chatId, AckRequest ackRequest) {
                 handleTypingStart(client, chatId, ackRequest);
             }
-        });
-
-        // Xử lý sự kiện kết thúc typing
+        });        // Xử lý sự kiện kết thúc typing
         server.addEventListener("typing_end", String.class, new DataListener<String>() {
             @Override
             public void onData(SocketIOClient client, String chatId, AckRequest ackRequest) {
                 handleTypingEnd(client, chatId, ackRequest);
+            }
+        });        // Xử lý sự kiện tạo nhóm
+        server.addEventListener("group_created", Map.class, new DataListener<Map>() {
+            @Override
+            public void onData(SocketIOClient client, Map groupData, AckRequest ackRequest) {
+                handleGroupCreated(client, groupData, ackRequest);
             }
         });
     }
@@ -280,9 +284,7 @@ public class SocketIOService {
                 "userId", userId,
                 "chatId", chatId,
                 "isTyping", true));
-    }
-
-    private void handleTypingEnd(SocketIOClient client, String chatId, AckRequest ackRequest) {
+    }    private void handleTypingEnd(SocketIOClient client, String chatId, AckRequest ackRequest) {
         String userId = sessionToUserMapping.get(client.getSessionId());
         if (userId == null) {
             sendErrorResponse(client, "typing_response", "Người dùng chưa được xác thực", ackRequest);
@@ -294,6 +296,76 @@ public class SocketIOService {
                 "userId", userId,
                 "chatId", chatId,
                 "isTyping", false));
+    }    private void handleGroupCreated(SocketIOClient client, Map groupData, AckRequest ackRequest) {
+        System.out.println("=== GROUP CREATED EVENT RECEIVED ===");
+        System.out.println("Client session ID: " + client.getSessionId());
+        
+        String userId = sessionToUserMapping.get(client.getSessionId());
+        if (userId == null) {
+            System.err.println("❌ User not authenticated for group_created event");
+            System.err.println("Available sessions: " + sessionToUserMapping.keySet());
+            sendErrorResponse(client, "group_created_response", "Người dùng chưa được xác thực", ackRequest);
+            return;
+        }
+
+        System.out.println("✅ Processing group_created event from authenticated user: " + userId);
+        System.out.println("📋 Group data received: " + groupData);
+        System.out.println("🔗 Currently online users: " + userToSessionMapping.keySet());
+
+        try {
+            // Lấy thông tin từ groupData
+            Object chatObj = groupData.get("chat");
+            Object memberIdsObj = groupData.get("memberIds");
+
+            System.out.println("Chat object: " + chatObj);
+            System.out.println("Member IDs object: " + memberIdsObj);
+
+            if (chatObj == null || memberIdsObj == null) {
+                System.err.println("Missing group information - chat: " + chatObj + ", memberIds: " + memberIdsObj);
+                sendErrorResponse(client, "group_created_response", "Thiếu thông tin nhóm", ackRequest);
+                return;
+            }
+
+            // Gửi thông báo đến tất cả các thành viên trong nhóm
+            if (memberIdsObj instanceof java.util.List) {
+                @SuppressWarnings("unchecked")
+                java.util.List<String> memberIds = (java.util.List<String>) memberIdsObj;
+                
+                System.out.println("Total members: " + memberIds.size());
+                System.out.println("Online users: " + userToSessionMapping.keySet());
+                
+                for (String memberId : memberIds) {
+                    System.out.println("Processing member: " + memberId + ", Creator: " + userId);
+                    
+                    // Gửi thông báo cho tất cả thành viên (bao gồm cả người tạo)
+                    boolean isOnline = isUserOnline(memberId);
+                    System.out.println("Member " + memberId + " is online: " + isOnline);
+                    
+                    if (isOnline) {
+                        sendMessageToUser(memberId, "group_created", groupData);
+                        System.out.println("✓ Sent group_created notification to user: " + memberId);
+                    } else {
+                        System.out.println("✗ User " + memberId + " is offline, skipping notification");
+                    }
+                }
+            } else {
+                System.err.println("memberIds is not a List: " + memberIdsObj.getClass());
+            }
+
+            // Gửi phản hồi thành công cho người tạo nhóm
+            if (ackRequest.isAckRequested()) {
+                ackRequest.sendAckData(Map.of(
+                        "status", "success",
+                        "message", "Thông báo nhóm đã được gửi đến các thành viên"));
+            }
+
+            System.out.println("✓ Group created event processed successfully by user: " + userId);
+
+        } catch (Exception e) {
+            System.err.println("Error processing group_created event: " + e.getMessage());
+            e.printStackTrace();
+            sendErrorResponse(client, "group_created_response", "Lỗi xử lý tạo nhóm: " + e.getMessage(), ackRequest);
+        }
     }
 
     private void sendErrorResponse(SocketIOClient client, String event, String errorMessage, AckRequest ackRequest) {
@@ -313,13 +385,22 @@ public class SocketIOService {
     // Helper method để gửi tin nhắn đến phòng chat cụ thể
     public void sendMessageToRoom(String chatId, String eventName, Object data) {
         server.getRoomOperations(chatId).sendEvent(eventName, data);
-    }
-
-    // Helper method để gửi tin nhắn đến người dùng cụ thể
+    }    // Helper method để gửi tin nhắn đến người dùng cụ thể
     public void sendMessageToUser(String userId, String eventName, Object data) {
+        System.out.println("🔄 Attempting to send event '" + eventName + "' to user: " + userId);
         UUID sessionId = userToSessionMapping.get(userId);
         if (sessionId != null) {
-            server.getClient(sessionId).sendEvent(eventName, data);
+            System.out.println("✅ Found session " + sessionId + " for user " + userId);
+            try {
+                server.getClient(sessionId).sendEvent(eventName, data);
+                System.out.println("✅ Successfully sent event '" + eventName + "' to user " + userId);
+            } catch (Exception e) {
+                System.err.println("❌ Error sending event to user " + userId + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            System.err.println("❌ No session found for user " + userId);
+            System.err.println("Available sessions: " + userToSessionMapping);
         }
     }
 
