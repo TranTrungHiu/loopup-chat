@@ -24,6 +24,7 @@ import {
 } from "@mui/material";
 import ChatHeader from "../component/ChatHeader";
 import MessageItem from "../component/MessageItem";
+import StreamVideoCall from "../component/StreamVideoCall";
 import {
   FaCog,
   FaUserPlus,
@@ -45,6 +46,7 @@ import {
   FaBell,
   FaTimes,
   FaCheck,
+  FaEdit,
   FaEnvelope,
   FaSpinner,
   FaExclamationCircle,
@@ -82,7 +84,6 @@ import {
   emitMessageRead,
 } from "../services/socketService";
 import ChatList from "../component/ChatList";
-import VideoCall from "../component/VideoCall";
 Modal.setAppElement("#root");
 
 const Home = () => {
@@ -115,6 +116,63 @@ const Home = () => {
   const [showFriendSidebar, setShowFriendSidebar] = useState(false);
   const [isFindFriendModalOpen, setIsFindFriendModalOpen] = useState(false);
   const navigate = useNavigate();
+  const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
+  const [videoCallInfo, setVideoCallInfo] = useState(null);
+  const [replyTo, setReplyTo] = useState(null);
+  const [editingMessage, setEditingMessage] = useState(null);
+
+
+    // Lấy userName từ userInfo hoặc uid
+  const userName = userInfo
+    ? `${userInfo.firstName || ""} ${userInfo.lastName || ""}`.trim() || uid
+    : uid;
+  // Hàm mở video call
+  const handleStartVideoCall = async () => {
+  if (!currentChat) return;
+  const streamToken = await fetchStreamToken(uid); // Lấy token từ Node.js service
+  setVideoCallInfo({
+    callId: currentChat.chatId,
+    token: streamToken,
+  });
+  setIsVideoCallOpen(true);
+};
+
+  const handleLeaveVideoCall = () => {
+    setIsVideoCallOpen(false);
+    setVideoCallInfo(null);
+  };
+  const fetchStreamToken = async (userId) => {
+  const res = await fetch("http://localhost:8081/api/stream/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId }),
+  });
+  const data = await res.json();
+  return data.token;
+};
+
+
+// Hàm lấy nội dung và tên người gửi của tin nhắn được trả lời
+  const getReplyContent = (replyToId) => {
+    const msg = messages.find((m) => m.id === replyToId);
+    if (!msg) return "Tin nhắn đã bị xóa hoặc thu hồi";
+    if (msg.type === "recalled") return "Tin nhắn đã được thu hồi";
+    if (msg.mediaType === "image") return "[Hình ảnh]";
+    if (msg.mediaType === "video") return "[Video]";
+    if (msg.mediaType === "document") return "[Tài liệu]";
+    return msg.message || msg.content || "";
+  };
+  const getReplyAuthorName = (replyToId) => {
+    const msg = messages.find((m) => m.id === replyToId);
+    if (!msg) return "Không xác định";
+    if (msg.sender === uid && userInfo)
+      return `${userInfo.lastName || ""} ${userInfo.firstName || ""}`.trim();
+    if (participantsInfo[currentChat?.chatId]?.firstName)
+      return `${participantsInfo[currentChat.chatId].lastName || ""} ${participantsInfo[currentChat.chatId].firstName || ""}`.trim();
+    return msg.sender || "Không xác định";
+  };
+
+  
 
   // xử lý emoji
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -218,56 +276,7 @@ const Home = () => {
       toast.error(err.message || "Không thể gửi file, vui lòng thử lại.");
     }
   };
-  // Video call states
-  const [isVideoCall, setIsVideoCall] = useState(false);
-  const [localStream, setLocalStream] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
-  const [incomingCall, setIncomingCall] = useState(null);
-  const peerConnection = useRef(null);
-  const socket = useRef(null);
-  const pendingCandidates = useRef([]);
-
-  // State để theo dõi audio
-  const [audio, setAudio] = useState(null);
-
-  // useEffect để khởi tạo audio object nhưng không phát ngay
-  useEffect(() => {
-    console.log("Incoming call state:", incomingCall);
-    if (incomingCall && !audio) {
-      try {
-        const audioObj = new Audio("/mp3/ringtone.mp3");
-        setAudio(audioObj);
-      } catch (err) {
-        console.error("Error creating Audio object:", err);
-      }
-    }
-    // Cleanup audio khi incomingCall bị xóa
-    return () => {
-      if (audio && incomingCall) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
-    };
-  }, [incomingCall, audio]);
-
-  // Hàm phát âm thanh khi có tương tác người dùng
-  const playRingtone = () => {
-    if (audio) {
-      audio.play().catch((err) => {
-        console.error("Audio playback error:", err);
-        if (err.name === "NotSupportedError") {
-          console.error(
-            "File format not supported or file not found. Ensure /mp3/ringtone.mp3 exists in public folder."
-          );
-        } else if (err.name === "NotAllowedError") {
-          console.error(
-            "Autoplay blocked. User interaction may be required before playing audio."
-          );
-        }
-      });
-    }
-  };
-
+ 
   const iceServers = [
     {
       urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"],
@@ -610,26 +619,49 @@ const Home = () => {
 
   // Xử lý gửi tin nhắn dựa hoàn toàn vào Socket.IO real-time
   const handleSendMessage = async () => {
-    try {
-      if (!currentChat || !newMessage.trim()) return;
 
-      const trimmedMessage = newMessage.trim();
-      setNewMessage(""); // Xóa tin nhắn trong input ngay lập tức
+  if (!currentChat || !newMessage.trim()) return;
 
-      // Đặt shouldScrollToBottomRef thành true để đảm bảo cuộn xuống dưới khi tin nhắn mới đến
-      shouldScrollToBottomRef.current = true;
+  const trimmedMessage = newMessage.trim();
 
-      // Gửi tin nhắn qua API mà không tạo tin nhắn tạm thời
-      // Socket.IO sẽ nhận và xử lý tin nhắn sau khi nó được lưu vào cơ sở dữ liệu
-      await sendMessage(currentChat.chatId, uid, trimmedMessage, token);
-
-      // Không cần thêm tin nhắn vào state vì socket sẽ nhận được tin nhắn và cập nhật UI
-      console.log("Tin nhắn đã được gửi, đang chờ phản hồi từ socket...");
-    } catch (err) {
-      console.error("Lỗi khi gửi tin nhắn:", err);
-      showToast("error", "Không thể gửi tin nhắn, vui lòng thử lại");
+  // Nếu đang sửa tin nhắn
+  if (editingMessage) {
+    if (trimmedMessage === editingMessage.message) {
+      setEditingMessage(null);
+      setNewMessage("");
+      return;
     }
-  };
+    // Gọi API cập nhật tin nhắn
+    try {
+      await fetch(`http://localhost:8080/api/messages/${editingMessage.id}/edit`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ message: trimmedMessage }),
+      });
+      // Sau khi sửa thành công, cập nhật state
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === editingMessage.id
+            ? { ...msg, message: trimmedMessage, edited: true }
+            : msg
+        )
+      );
+    } catch (err) {
+      alert("Lỗi khi sửa tin nhắn!");
+    }
+    setEditingMessage(null);
+    setNewMessage("");
+    return;
+  }
+
+  // Gửi tin nhắn mới như cũ
+  await sendMessage(currentChat.chatId, uid, trimmedMessage, token, replyTo ? replyTo.id : undefined);
+  setReplyTo(null);
+  setNewMessage("");
+};
 
   const handleChatSelect = useCallback(
     async (chat) => {
@@ -771,260 +803,6 @@ const Home = () => {
     }
   };
 
-  // Video call logic
-  useEffect(() => {
-    const connectWebSocket = () => {
-      socket.current = new WebSocket(
-        `ws://localhost:8080/ws/video?userId=${uid}`
-      );
-
-      socket.current.onopen = () => {
-        console.log("WebSocket connected for user:", uid);
-        while (pendingCandidates.current.length > 0) {
-          const candidate = pendingCandidates.current.shift();
-          socket.current.send(
-            JSON.stringify({
-              type: "ice-candidate",
-              to: currentParticipant?.uid,
-              candidate,
-            })
-          );
-        }
-      };
-
-      socket.current.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        console.log("Raw WebSocket message:", event.data);
-        console.log("Parsed WebSocket message:", data);
-        switch (data.type) {
-          case "video-offer":
-            handleReceiveOffer(data);
-            break;
-          case "video-answer":
-            handleReceiveAnswer(data);
-            break;
-          case "ice-candidate":
-            handleReceiveIceCandidate(data);
-            break;
-          case "call-rejected":
-            handleCallRejected(data);
-            break;
-          default:
-            console.warn("Unknown message type:", data.type);
-        }
-      };
-
-      socket.current.onclose = () => {
-        console.log("WebSocket disconnected, retrying in 3s...");
-        setTimeout(connectWebSocket, 3000);
-      };
-
-      socket.current.onerror = (error) => {
-        console.error("WebSocket error:", error);
-      };
-    };
-
-    connectWebSocket();
-
-    return () => {
-      if (socket.current) {
-        socket.current.close();
-      }
-    };
-  }, [uid]);
-
-  const handleStartVideoCall = async () => {
-    console.log("Starting video call to:", currentParticipant);
-    if (!currentParticipant?.uid) {
-      showToast("warning", "Vui lòng chọn người dùng để gọi video");
-      return;
-    }
-
-    try {
-      await waitForWebSocket();
-      const stream = await navigator.mediaDevices
-        .getUserMedia({
-          video: true,
-          audio: true,
-        })
-        .catch((err) => {
-          console.error("Media access error:", err);
-          showToast(
-            "error",
-            "Không thể truy cập camera hoặc micro. Vui lòng kiểm tra quyền"
-          );
-          throw err;
-        });
-      setLocalStream(stream);
-
-      if (peerConnection.current) {
-        peerConnection.current.close();
-      }
-      peerConnection.current = new RTCPeerConnection({ iceServers });
-
-      stream
-        .getTracks()
-        .forEach((track) => peerConnection.current.addTrack(track, stream));
-
-      peerConnection.current.onicecandidate = (event) => {
-        if (event.candidate) {
-          if (socket.current.readyState === WebSocket.OPEN) {
-            socket.current.send(
-              JSON.stringify({
-                type: "ice-candidate",
-                to: currentParticipant.uid,
-                candidate: event.candidate,
-              })
-            );
-          } else {
-            console.log("Storing ICE candidate due to WebSocket not ready");
-            pendingCandidates.current.push(event.candidate);
-          }
-        }
-      };
-
-      peerConnection.current.ontrack = (event) => {
-        setRemoteStream(event.streams[0]);
-      };
-
-      const offer = await peerConnection.current.createOffer();
-      await peerConnection.current.setLocalDescription(offer);
-      console.log("Sending video-offer to:", currentParticipant.uid);
-      socket.current.send(
-        JSON.stringify({
-          type: "video-offer",
-          to: currentParticipant.uid,
-          from: uid,
-          sdp: offer,
-        })
-      );
-
-      setIsVideoCall(true);
-    } catch (error) {
-      console.error("Lỗi khi bắt đầu cuộc gọi video:", error);
-      showToast("error", "Không thể bắt đầu cuộc gọi video: " + error.message);
-      handleEndCall();
-    }
-  };
-
-  const handleReceiveOffer = async (data) => {
-    console.log("Received offer data:", data);
-    if (!data.from || !data.sdp) {
-      console.error("Invalid offer data:", data);
-      return;
-    }
-
-    try {
-      // Fetch caller info
-      const response = await fetch(
-        `http://localhost:8080/api/user/profile/${data.from}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (!response.ok) {
-        throw new Error(
-          `Không thể lấy thông tin người gọi: ${response.status}`
-        );
-      }
-      const callerInfo = await response.json();
-      console.log("Caller info:", callerInfo);
-      setCurrentParticipant(callerInfo);
-      setIncomingCall({ from: data.from, sdp: data.sdp });
-    } catch (error) {
-      console.error("Lỗi khi lấy thông tin người gọi:", error);
-      setCurrentParticipant({
-        uid: data.from,
-        firstName: "Người dùng",
-        lastName: "không xác định",
-        avatarUrl: "/default-avatar.png",
-        isDefault: true,
-      });
-      setIncomingCall({ from: data.from, sdp: data.sdp });
-    }
-  };
-
-  const handleAcceptCall = async () => {
-    if (!incomingCall) return;
-
-    try {
-      const stream = await navigator.mediaDevices
-        .getUserMedia({
-          video: true,
-          audio: true,
-        })
-        .catch((err) => {
-          console.error("Media access error:", err);
-          showToast(
-            "error",
-            "Không thể truy cập camera hoặc micro. Vui lòng kiểm tra quyền."
-          );
-          throw err;
-        });
-      setLocalStream(stream);
-
-      if (peerConnection.current) {
-        peerConnection.current.close();
-      }
-      peerConnection.current = new RTCPeerConnection({ iceServers });
-
-      stream
-        .getTracks()
-        .forEach((track) => peerConnection.current.addTrack(track, stream));
-
-      peerConnection.current.onicecandidate = (event) => {
-        if (event.candidate) {
-          if (socket.current.readyState === WebSocket.OPEN) {
-            socket.current.send(
-              JSON.stringify({
-                type: "ice-candidate",
-                to: incomingCall.from,
-                candidate: event.candidate,
-              })
-            );
-          } else {
-            console.log("Storing ICE candidate due to WebSocket not ready");
-            pendingCandidates.current.push(event.candidate);
-          }
-        }
-      };
-
-      peerConnection.current.ontrack = (event) => {
-        setRemoteStream(event.streams[0]);
-      };
-
-      await peerConnection.current.setRemoteDescription(
-        new RTCSessionDescription(incomingCall.sdp)
-      );
-
-      const answer = await peerConnection.current.createAnswer();
-      await peerConnection.current.setLocalDescription(answer);
-      socket.current.send(
-        JSON.stringify({
-          type: "video-answer",
-          to: incomingCall.from,
-          from: uid,
-          sdp: answer,
-        })
-      );
-
-      setIsVideoCall(true);
-      setIncomingCall(null);
-      showToast("success", "Đã kết nối cuộc gọi video");
-    } catch (error) {
-      console.error("Lỗi khi nhận offer:", error);
-      showToast("error", "Lỗi khi xử lý trả lời cuộc gọi: " + error.message);
-      handleEndCall();
-    }
-  };
-
-  const handleCallRejected = (data) => {
-    showToast("info", "Cuộc gọi bị từ chối bởi người nhận");
-    handleEndCall();
-  };
-
   const handleReceiveAnswer = async (data) => {
     if (!data.sdp) {
       console.error("Invalid answer data:", data);
@@ -1054,51 +832,6 @@ const Home = () => {
       );
     } catch (error) {
       console.error("Lỗi khi nhận ICE candidate:", error);
-    }
-  };
-
-  const handleRejectCall = () => {
-    if (incomingCall) {
-      // Gửi thông báo từ chối cuộc gọi đến người gọi
-      socket.current.send(
-        JSON.stringify({
-          type: "call-rejected",
-          to: incomingCall.from,
-          from: uid,
-        })
-      );
-
-      // Đóng cửa sổ cuộc gọi đến
-      setIncomingCall(null);
-
-      // Dừng âm thanh chuông nếu đang phát
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
-
-      showToast("info", "Bạn đã từ chối cuộc gọi");
-    }
-  };
-
-  const handleEndCall = () => {
-    if (localStream) {
-      localStream.getTracks().forEach((track) => track.stop());
-      setLocalStream(null);
-    }
-    if (remoteStream) {
-      setRemoteStream(null);
-    }
-    if (peerConnection.current) {
-      peerConnection.current.close();
-      peerConnection.current = null;
-    }
-    pendingCandidates.current = [];
-    setIsVideoCall(false);
-    setIncomingCall(null);
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
     }
   };
 
@@ -1531,8 +1264,35 @@ const Home = () => {
                           previousSender={
                             index > 0 ? messages[index - 1].sender : null
                           }
-                        />
-                      );
+                          onReply={(m) => setReplyTo(m)}
+                          messages={messages}
+                          getReplyContent={getReplyContent}
+                          onStartEdit={(msg) => {
+                            setEditingMessage(msg);
+                            setNewMessage(msg.message);
+                            messageInputRef.current?.focus();
+                          }}
+                          getReplyAuthorName={getReplyAuthorName}
+                          onEditMessage={(messageId, newText) => {
+                          setMessages((prev) =>
+                            prev.map((msg) =>
+                              msg.id === messageId
+                                ? { ...msg, message: newText, edited: true }
+                                : msg
+                            )
+                          );
+                        }}
+                        // onEditMessage={(messageId, newText) => {
+                        //   setMessages((prev) =>
+                        //     prev.map((msg) =>
+                        //       msg.id === messageId
+                        //         ? { ...msg, message: newText, edited: true }
+                        //         : msg
+                        //     )
+                        //   );
+                        // }}
+                      />
+                      );  
                     })}
                     <div ref={messagesEndRef} />
                   </div>
@@ -1544,6 +1304,40 @@ const Home = () => {
                   </div>
                 )}
               </div>
+
+              {/* Hiển thị khung reply phía trên input nếu đang trả lời */}
+              {replyTo && (
+                <div className="reply-preview reply-preview-input">
+                  <span className="reply-author">
+                    {getReplyAuthorName(replyTo.id)}
+                  </span>
+                  <span className="reply-content">
+                    {getReplyContent(replyTo.id)}
+                  </span>
+                  <button
+                    className="close-reply-btn"
+                    onClick={() => setReplyTo(null)}
+                    title="Hủy trả lời"
+                  >
+                    <FaTimes />
+                  </button>
+                </div>
+              )}
+
+              {editingMessage && (
+                <div className="edit-info-bar" style={{ color: "#888", marginBottom: 4 }}>
+                  Đang sửa tin nhắn
+                  <button
+                    onClick={() => {
+                      setEditingMessage(null);
+                      setNewMessage("");
+                    }}
+                    style={{ marginLeft: 8 }}
+                  >
+                    Hủy
+                  </button>
+                </div>
+              )}
 
               <div className="chat-input-area">
                 <div className="chat-input-container">
@@ -1603,7 +1397,7 @@ const Home = () => {
                     <button
                       className="send-btn"
                       onClick={handleSendMessage}
-                      disabled={!newMessage.trim()}
+                      disabled={!newMessage.trim()|| (editingMessage && newMessage.trim() === editingMessage.message)}
                     >
                       <BsSendFill />
                     </button>
@@ -1824,75 +1618,17 @@ const Home = () => {
             onLeftGroup={handleLeaveCurrentChat}
           />
         )}
-        <Modal
-          isOpen={isVideoCall}
-          onRequestClose={handleEndCall}
-          className="video-call-modal bg-transparent"
-          overlayClassName="overlay bg-black bg-opacity-80"
-        >
-          <VideoCall
-            localStream={localStream}
-            remoteStream={remoteStream}
-            localUserName={`${userInfo?.firstName} ${userInfo?.lastName}`}
-            remoteUserName={`${currentParticipant?.firstName} ${currentParticipant?.lastName}`}
-            onEndCall={handleEndCall}
+        {/* Hiển thị giao diện gọi video khi mở */}
+        {isVideoCallOpen && videoCallInfo && (
+          <StreamVideoCall
+            apiKey="pvjq2vc7dh9j"
+            userId={uid}
+            userName={userName}
+            token={videoCallInfo.token}
+            callId={videoCallInfo.callId}
+            onLeave={handleLeaveVideoCall}
           />
-        </Modal>
-        <Modal
-          isOpen={!!incomingCall}
-          onRequestClose={() => {
-            handleRejectCall();
-            if (audio) {
-              audio.pause();
-              audio.currentTime = 0;
-            }
-          }}
-          className="incoming-call-modal"
-          overlayClassName="overlay"
-        >
-          <div className="modal-content">
-            <img
-              src={currentParticipant?.avatarUrl || "/default-avatar.png"}
-              alt="caller"
-              className="caller-avatar"
-              onError={(e) => {
-                e.target.src = "/default-avatar.png";
-              }}
-            />
-            <h2 className="caller-name">
-              Cuộc gọi video từ {currentParticipant?.firstName || "Người dùng"}{" "}
-              {currentParticipant?.lastName || "không xác định"}
-            </h2>
-            <div className="button-group">
-              <button
-                className="accept-btn"
-                onClick={() => {
-                  playRingtone();
-                  handleAcceptCall();
-                  if (audio) {
-                    audio.pause();
-                    audio.currentTime = 0;
-                  }
-                }}
-              >
-                Chấp nhận
-              </button>
-              <button
-                className="reject-btn"
-                onClick={() => {
-                  playRingtone();
-                  handleRejectCall();
-                  if (audio) {
-                    audio.pause();
-                    audio.currentTime = 0;
-                  }
-                }}
-              >
-                Từ chối
-              </button>
-            </div>
-          </div>
-        </Modal>
+        )}
       </div>
       <Toast />
     </div>

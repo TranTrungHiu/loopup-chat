@@ -8,9 +8,13 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^7.0.2",
     "@mui/material": "^7.0.2",
+    "@stream-io/video-client": "^1.23.2",
+    "@stream-io/video-react-sdk": "^1.18.1",
     "axios": "^1.8.4",
+    "cors": "^2.8.5",
     "date-fns": "^4.1.0",
     "emoji-picker-react": "^4.12.2",
+    "express": "^5.1.0",
     "firebase": "^11.6.0",
     "framer-motion": "^12.9.2",
     "lucide-react": "^0.501.0",
@@ -23,7 +27,8 @@
     "socket.io-client": "^2.5.0"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "concurrently \"npm run start-react\" \"node src/services/callService.js\"",
+    "start-react": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
@@ -39,5 +44,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }

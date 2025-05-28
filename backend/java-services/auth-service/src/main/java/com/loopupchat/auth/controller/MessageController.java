@@ -25,13 +25,7 @@ import com.amazonaws.auth.BasicAWSCredentials;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/messages")
@@ -132,6 +126,10 @@ public class MessageController {
                 if (request.containsKey("fileSize")) {
                     messageData.put("fileSize", request.get("fileSize"));
                 }
+            }
+            // thêm id messgage reply nếu có
+            if (request.containsKey("replyTo")) {
+                messageData.put("replyTo", request.get("replyTo"));
             }
 
             messageData.put("timestamp", timestamp);
@@ -568,6 +566,94 @@ public class MessageController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error uploading file");
+        }
+    }
+
+    // Thu hồi tin nhắn
+    @PostMapping("/{id}/recall")
+    public ResponseEntity<?> recallMessage(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        String userId = (String) body.get("userId");
+        Firestore firestore = FirestoreClient.getFirestore();
+        DocumentReference msgRef = firestore.collection("messages").document(id);
+
+        try {
+            DocumentSnapshot snapshot = msgRef.get().get();
+            if (!snapshot.exists()) {
+                return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy tin nhắn"));
+            }
+            String sender = (String) snapshot.get("sender");
+            if (!Objects.equals(sender, userId)) {
+                return ResponseEntity.status(403).body(Map.of("error", "Không thể thu hồi"));
+            }
+            Map<String, Object> update = new HashMap<>();
+            update.put("type", "recalled");
+            update.put("message", "Tin nhắn đã được thu hồi");
+            msgRef.update(update);
+            // Lấy chatId để gửi socket
+            String chatId = (String) snapshot.get("chatId");
+            if (chatId != null) {
+                Map<String, Object> recallEvent = new HashMap<>();
+                recallEvent.put("messageId", id);
+                recallEvent.put("chatId", chatId);
+                recallEvent.put("type", "recalled");
+                recallEvent.put("message", "Tin nhắn đã được thu hồi");
+                recallEvent.put("sender", sender);
+                socketIOServer.getRoomOperations(chatId).sendEvent("message_recalled", recallEvent);
+            }
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // Chuyển tiếp tin nhắn
+    @PostMapping("/forward")
+    public ResponseEntity<?> forwardMessage(@RequestBody Map<String, Object> body) {
+        String toUserId = (String) body.get("toUserId");
+        String messageId = (String) body.get("messageId");
+        String fromUserId = (String) body.get("fromUserId");
+        Firestore firestore = FirestoreClient.getFirestore();
+        DocumentReference msgRef = firestore.collection("messages").document(messageId);
+
+        try {
+            DocumentSnapshot snapshot = msgRef.get().get();
+            if (!snapshot.exists()) {
+                return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy tin nhắn"));
+            }
+            Map<String, Object> msgData = new HashMap<>(snapshot.getData());
+            msgData.put("id", UUID.randomUUID().toString());
+            msgData.put("sender", fromUserId);
+            msgData.put("forwardedTo", toUserId);
+            msgData.put("timestamp", new Date());
+            msgData.put("readBy", Map.of(fromUserId, true));
+            firestore.collection("messages").add(msgData);
+            return ResponseEntity.ok(msgData);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // Chỉnh sửa tin nhắn
+    @PutMapping("/{id}/edit")
+    public ResponseEntity<?> editMessage(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body) {
+        try {
+            String newText = (String) body.get("message");
+            if (newText == null || newText.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Nội dung không hợp lệ"));
+            }
+            Firestore firestore = FirestoreClient.getFirestore();
+            DocumentReference msgRef = firestore.collection("messages").document(id);
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("message", newText);
+            updates.put("edited", true);
+            updates.put("editedAt", new Date());
+            msgRef.update(updates);
+            return ResponseEntity.ok(Map.of("status", "success"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
 }

@@ -168,14 +168,18 @@ export const fetchMessages = async (chatId, token) => {
 };
 
 // Gửi tin nhắn
-export const sendMessage = async (chatId, sender, message, token) => {
+export const sendMessage = async (chatId, sender, message, token, replyTo) => {
+  const payload = {
+    chatId,
+    sender,
+    message,
+  };
+  if (replyTo) {
+    payload.replyTo = replyTo;
+  }
   const response = await axios.post(
     `http://localhost:8080/api/messages`,
-    {
-      chatId,
-      sender,
-      message,
-    },
+    payload,
     {
       headers: {
         Authorization: `Bearer ${token}`,

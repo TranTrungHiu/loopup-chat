@@ -123,8 +123,8 @@ const ChatHeader = ({ currentChat, currentParticipant, onInfoClick, onVideoCall,
         </button>
         
         <button className="action-button" onClick={onVideoCall} title="Gọi video">
-          <FaVideo />
-        </button>
+        <FaVideo />
+      </button>
         
         <button className="action-button" onClick={onInfoClick} title="Thông tin">
           <FaInfoCircle />

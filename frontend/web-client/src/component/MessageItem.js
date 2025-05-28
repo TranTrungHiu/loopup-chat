@@ -16,67 +16,96 @@ import {
   FaFileCode,
   FaTimes,
   FaPlay,
-  FaExpand
+  FaExpand,
+  FaReply, FaShare, FaEllipsisV, FaCopy, FaUndo, FaEdit
 } from "react-icons/fa";
 import "../pages/styles/MessageItem.css";
+
+// Modal chọn bạn bè để chuyển tiếp
+const ForwardModal = ({ friends, onClose, onForward }) => {
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState(null);
+
+  const filtered = friends.filter(f =>
+    `${f.firstName} ${f.lastName}`.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <h3>Chọn bạn để chuyển tiếp</h3>
+        <input
+          type="text"
+          placeholder="Tìm kiếm bạn bè..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ width: "100%", marginBottom: 8 }}
+        />
+        <div style={{ maxHeight: 200, overflowY: "auto" }}>
+          {filtered.map(f => (
+            <div
+              key={f.id}
+              className={`friend-item${selected === f.id ? " selected" : ""}`}
+              onClick={() => setSelected(f.id)}
+              style={{
+                padding: 8,
+                cursor: "pointer",
+                background: selected === f.id ? "#e6f7ff" : undefined
+              }}
+            >
+              {f.firstName} {f.lastName}
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 12, textAlign: "right" }}>
+          <button onClick={onClose} style={{ marginRight: 8 }}>Hủy</button>
+          <button
+            disabled={!selected}
+            onClick={() => {
+              const friend = friends.find(f => f.id === selected);
+              if (friend) onForward(friend);
+            }}
+          >
+            Chuyển tiếp
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Xử lý hiển thị icon cho các loại file khác nhau
 const getFileIcon = (fileName) => {
   if (!fileName) return <FaFile />;
-  
   const extension = fileName.split('.').pop().toLowerCase();
-  
-  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(extension)) {
-    return <FaFileImage />;
-  } else if (['mp4', 'webm', 'mkv', 'avi', 'mov'].includes(extension)) {
-    return <FaFileVideo />;
-  } else if (['mp3', 'wav', 'ogg', 'aac'].includes(extension)) {
-    return <FaFileAudio />;
-  } else if (extension === 'pdf') {
-    return <FaFilePdf />;
-  } else if (['doc', 'docx'].includes(extension)) {
-    return <FaFileWord />;
-  } else if (['xls', 'xlsx'].includes(extension)) {
-    return <FaFileExcel />;
-  } else if (['ppt', 'pptx'].includes(extension)) {
-    return <FaFilePowerpoint />;
-  } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) {
-    return <FaFileArchive />;
-  } else if (['js', 'html', 'css', 'java', 'py', 'c', 'cpp', 'php'].includes(extension)) {
-    return <FaFileCode />;
-  } else {
-    return <FaFile />;
-  }
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(extension)) return <FaFileImage />;
+  if (['mp4', 'webm', 'mkv', 'avi', 'mov'].includes(extension)) return <FaFileVideo />;
+  if (['mp3', 'wav', 'ogg', 'aac'].includes(extension)) return <FaFileAudio />;
+  if (extension === 'pdf') return <FaFilePdf />;
+  if (['doc', 'docx'].includes(extension)) return <FaFileWord />;
+  if (['xls', 'xlsx'].includes(extension)) return <FaFileExcel />;
+  if (['ppt', 'pptx'].includes(extension)) return <FaFilePowerpoint />;
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) return <FaFileArchive />;
+  if (['js', 'html', 'css', 'java', 'py', 'c', 'cpp', 'php'].includes(extension)) return <FaFileCode />;
+  return <FaFile />;
 };
 
 // Modal component để hiển thị xem trước media
 const MediaViewerModal = ({ media, onClose }) => {
   const [loading, setLoading] = useState(true);
-  
-  // Sử dụng useEffect để xử lý file không thể xem trước
   useEffect(() => {
     if (media) {
       const { url, type, fileName } = media;
       const mediaType = type || getMediaTypeFromUrl(url, fileName);
-      
-      // Nếu là loại file không thể xem trước, đặt loading = false ngay lập tức
       if (mediaType !== 'image' && mediaType !== 'video' && mediaType !== 'pdf' && mediaType !== 'audio') {
         setLoading(false);
       }
     }
   }, [media]);
-
-  // Xử lý loại media khác nhau
   const renderMediaContent = () => {
     if (!media) return null;
-
-    // Xác định loại media dựa trên URL hoặc loại được chỉ định
     const { url, type, fileName } = media;
-    
-    // Loại file từ phần mở rộng nếu không có type được chỉ định
     const mediaType = type || getMediaTypeFromUrl(url, fileName);
-    
-    // Hiển thị nội dung dựa trên loại media
     switch (mediaType) {
       case 'image':
         return (
@@ -88,7 +117,6 @@ const MediaViewerModal = ({ media, onClose }) => {
             onError={() => setLoading(false)}
           />
         );
-        
       case 'video':
         return (
           <video 
@@ -102,7 +130,6 @@ const MediaViewerModal = ({ media, onClose }) => {
             Trình duyệt không hỗ trợ video.
           </video>
         );
-        
       case 'pdf':
         return (
           <div className="modal-media-document">
@@ -123,7 +150,6 @@ const MediaViewerModal = ({ media, onClose }) => {
             </div>
           </div>
         );
-        
       case 'audio':
         return (
           <div className="modal-media-audio">
@@ -144,10 +170,7 @@ const MediaViewerModal = ({ media, onClose }) => {
             </div>
           </div>
         );
-        
       default:
-        // Cho các loại file khác, hiển thị thông tin và nút tải xuống
-        // Không gọi setLoading(false) ở đây, đã được xử lý trong useEffect
         return (
           <div className="modal-media-file">
             <div className="file-icon large">
@@ -166,12 +189,8 @@ const MediaViewerModal = ({ media, onClose }) => {
         );
     }
   };
-  
-  // Hàm xác định loại media từ URL hoặc tên file
   const getMediaTypeFromUrl = (url, fileName) => {
     if (!url) return 'unknown';
-    
-    // Lấy phần mở rộng từ fileName hoặc url
     let extension = '';
     if (fileName && fileName.includes('.')) {
       extension = fileName.split('.').pop().toLowerCase();
@@ -181,36 +200,22 @@ const MediaViewerModal = ({ media, onClose }) => {
         extension = urlParts.pop().toLowerCase();
       }
     }
-    
-    // Xác định loại dựa trên phần mở rộng
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension)) {
-      return 'image';
-    } else if (['mp4', 'webm', 'ogg', 'mov', 'avi'].includes(extension)) {
-      return 'video';
-    } else if (['pdf'].includes(extension)) {
-      return 'pdf';
-    } else if (['doc', 'docx'].includes(extension)) {
-      return 'document';
-    } else if (['xls', 'xlsx'].includes(extension)) {
-      return 'spreadsheet';
-    } else if (['ppt', 'pptx'].includes(extension)) {
-      return 'presentation';
-    } else if (['mp3', 'wav', 'ogg', 'aac'].includes(extension)) {
-      return 'audio';
-    } else {
-      return 'unknown';
-    }
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension)) return 'image';
+    if (['mp4', 'webm', 'ogg', 'mov', 'avi'].includes(extension)) return 'video';
+    if (['pdf'].includes(extension)) return 'pdf';
+    if (['doc', 'docx'].includes(extension)) return 'document';
+    if (['xls', 'xlsx'].includes(extension)) return 'spreadsheet';
+    if (['ppt', 'pptx'].includes(extension)) return 'presentation';
+    if (['mp3', 'wav', 'ogg', 'aac'].includes(extension)) return 'audio';
+    return 'unknown';
   };
-
   return (
     <div className="media-modal-overlay" onClick={onClose}>
       <div className="media-modal-content" onClick={e => e.stopPropagation()}>
         <button className="media-modal-close" onClick={onClose}>
           <FaTimes />
         </button>
-        
         {loading && <div className="media-loading-spinner">Đang tải...</div>}
-        
         <div className={`media-content-container ${loading ? 'loading' : ''}`}>
           {renderMediaContent()}
         </div>
@@ -225,91 +230,98 @@ const MessageItem = ({
   showAvatar = true, 
   participant = null,
   formattedTime = "",
-  previousSender
+  previousSender,
+  friendsList = [],
+  uid,
+  onReply,
+  onForwardSuccess,
+  getReplyContent,
+  getReplyAuthorName,
+  onStartEdit
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [viewingMedia, setViewingMedia] = useState(null);
+  const [hovered, setHovered] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+  const [showForward, setShowForward] = useState(false);
 
   useEffect(() => {
-    // Debug: Log tin nhắn để hiểu cấu trúc khi gặp vấn đề
     if (!message || !message.message) {
       console.log('Debugging message structure:', message);
     }
   }, [message]);
-  
+
+  // Hover actions
+  const handleReply = () => {
+    if (typeof onReply === "function") onReply(message);
+  };
+  const handleForward = () => setShowForward(true);
+  const handleCopy = () => {
+    if (typeof message.message === "string" && message.message.trim()) {
+      navigator.clipboard.writeText(message.message);
+    }
+  };
+  const handleRecall = async () => {
+    await fetch(`http://localhost:8080/api/messages/${message.id}/recall`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("idToken")}`,
+      },
+      body: JSON.stringify({ userId: uid || message.sender }),
+    });
+    setShowMore(false);
+  };
+  const handleDownload = (url, fileName) => {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName || "file";
+    a.click();
+  };
+
   // Kiểm tra xem tin nhắn này có cần hiển thị avatar không
   const shouldShowAvatar = showAvatar && !isCurrentUser;
-  
   // Kiểm tra xem tin nhắn này có cần hiển thị tên người gửi không
   const shouldShowSender = showAvatar && !isCurrentUser && participant;
-  
+
   // Improved timestamp formatting function
   const formatTime = (timestamp) => {
     if (formattedTime) return formattedTime;
-    
-    // Handle different timestamp formats
     let date;
-    
-    if (!timestamp) {
-      return '';
-    }
-    
+    if (!timestamp) return '';
     try {
-      // If it's a number (unix timestamp in seconds), convert to milliseconds
       if (typeof timestamp === 'number') {
-        // Check if timestamp is in seconds (10 digits) and convert to milliseconds if needed
         const isInSeconds = timestamp.toString().length === 10;
         date = new Date(isInSeconds ? timestamp * 1000 : timestamp);
-      } 
-      // If it's a string, try to parse it
-      else if (typeof timestamp === 'string') {
-        // Try parsing as ISO string
+      } else if (typeof timestamp === 'string') {
         date = new Date(timestamp);
-        
-        // If invalid, try parsing as Firebase timestamp
         if (isNaN(date.getTime()) && timestamp.seconds) {
           date = new Date(timestamp.seconds * 1000);
         }
-      } 
-      // If it's a Firebase timestamp object with seconds and nanoseconds
-      else if (timestamp && timestamp.seconds) {
+      } else if (timestamp && timestamp.seconds) {
         date = new Date(timestamp.seconds * 1000);
-      } 
-      // If it's already a Date object
-      else if (timestamp instanceof Date) {
+      } else if (timestamp instanceof Date) {
         date = timestamp;
-      } 
-      else {
+      } else {
         date = new Date();
       }
-      
-      // Check if the date is valid
       if (isNaN(date.getTime())) {
         console.warn('Invalid date format:', timestamp);
         return 'Just now';
       }
-      
-      return date.toLocaleString('vi-VN', { 
-        hour: '2-digit', 
-        minute: '2-digit'
-      });
+      return date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     } catch (error) {
       console.error('Error formatting timestamp:', error, timestamp);
       return 'Just now';
     }
   };
-  
-  // Trạng thái tin nhắn
+
   const renderMessageStatus = () => {
-    // Nếu tin nhắn đã được đọc bởi ít nhất một người khác
     if (message.readBy && Object.keys(message.readBy).length > 0) {
-      // Tìm những người đã đọc không phải người gửi
       const readersNotSender = Object.keys(message.readBy).filter(
         readerId => readerId !== message.sender
       );
-      
-      // Nếu có người đã đọc (không phải người gửi)
       if (readersNotSender.length > 0) {
         return (
           <span className="message-status-icon seen" title="Đã xem">
@@ -318,8 +330,6 @@ const MessageItem = ({
         );
       }
     }
-    
-    // Mặc định: đã gửi
     return (
       <span className="message-status-icon sent" title="Đã gửi">
         <FaCheck />
@@ -327,7 +337,6 @@ const MessageItem = ({
     );
   };
 
-  // Function to handle opening the media viewer
   const openMediaViewer = (mediaUrl, mediaType, fileName) => {
     setViewingMedia({
       url: mediaUrl,
@@ -336,20 +345,12 @@ const MessageItem = ({
     });
   };
 
-  // Helper function to safely display message content
   const renderMessageContent = () => {
-    // Nếu tin nhắn không tồn tại
-    if (!message) {
-      return 'No message data';
-    }
-    
-    // Hỗ trợ các định dạng media
-    // Ưu tiên kiểm tra trường mediaType từ backend mới
+    if (!message) return 'No message data';
     if (message.mediaType === 'image' || message.type === 'image' || 
         (message.mediaUrl && message.mediaUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i))) {
       const mediaUrl = message.mediaUrl || message.content || message.url || message.imageUrl;
       const fileName = message.fileName || "image";
-      
       return (
         <div className="message-bubble message-image-container">
           <img
@@ -361,8 +362,6 @@ const MessageItem = ({
             onClick={() => openMediaViewer(mediaUrl, 'image', fileName)}
           />
           {!imageLoaded && <div className="image-loader">Đang tải...</div>}
-          
-          {/* Hiển thị thời gian bên trong bubble tin nhắn hình ảnh */}
           <div className={`message-time-container-inside ${isCurrentUser ? 'user' : 'other'}`}>
             <span className="message-time">{formatTime(message.timestamp || message.createdAt || message.date)}</span>
             {isCurrentUser && renderMessageStatus()}
@@ -370,17 +369,13 @@ const MessageItem = ({
         </div>
       );
     }
-    
-    // Trường hợp là video
     if (message.mediaType === 'video' || message.type === 'video' ||
         (message.mediaUrl && message.mediaUrl.match(/\.(mp4|webm|ogg|mov|avi)$/i))) {
       const mediaUrl = message.mediaUrl || message.content || message.url || message.videoUrl;
       const fileName = message.fileName || "video";
-      
       return (
         <div className="message-bubble message-video-container">
           <div className="video-thumbnail" onClick={() => openMediaViewer(mediaUrl, 'video', fileName)}>
-            {/* Video thumbnail với overlay nút play */}
             <div className="video-play-button">
               <FaPlay />
             </div>
@@ -388,8 +383,6 @@ const MessageItem = ({
               <span className="video-filename">{fileName}</span>
             </div>
           </div>
-          
-          {/* Hiển thị thời gian bên trong bubble tin nhắn video */}
           <div className={`message-time-container-inside ${isCurrentUser ? 'user' : 'other'}`}>
             <span className="message-time">{formatTime(message.timestamp || message.createdAt || message.date)}</span>
             {isCurrentUser && renderMessageStatus()}
@@ -397,13 +390,10 @@ const MessageItem = ({
         </div>
       );
     }
-    
-    // Trường hợp là tài liệu
     if (message.mediaType === 'document' || message.type === 'document' || message.type === 'file' ||
         (message.mediaUrl && message.fileName)) {
       const mediaUrl = message.mediaUrl || message.content || message.url || message.fileUrl;
       const fileName = message.fileName || "file";
-      
       return (
         <div className="message-bubble message-document-container">
           <div 
@@ -425,8 +415,6 @@ const MessageItem = ({
               <FaDownload />
             </div>
           </div>
-          
-          {/* Hiển thị thời gian bên trong bubble tin nhắn tài liệu */}
           <div className={`message-time-container-inside ${isCurrentUser ? 'user' : 'other'}`}>
             <span className="message-time">{formatTime(message.timestamp || message.createdAt || message.date)}</span>
             {isCurrentUser && renderMessageStatus()}
@@ -434,17 +422,12 @@ const MessageItem = ({
         </div>
       );
     }
-    
-    // Tin nhắn văn bản - trích xuất nội dung từ nhiều nguồn khác nhau
     let textContent = "";
-    
-    // Kiểm tra nội dung tin nhắn trực tiếp
     if (typeof message === 'string') {
       textContent = message;
     } else {
-      // Kiểm tra tất cả các trường có thể chứa nội dung tin nhắn
       if (message.message !== undefined && message.message !== null) {
-        textContent = String(message.message); // Chuyển đổi thành string trong mọi trường hợp
+        textContent = String(message.message);
       } else if (message.content) {
         textContent = String(message.content);
       } else if (message.text) {
@@ -453,14 +436,10 @@ const MessageItem = ({
         textContent = message.data;
       }
     }
-    
-    // Nếu vẫn không có nội dung và bật chế độ debug
     if (!textContent && typeof message === 'object') {
       console.debug('Debug message structure:', Object.keys(message));
-      
-      // Tạo chuỗi chứa thông tin về tất cả các trường trong đối tượng tin nhắn
       const messageFields = Object.entries(message)
-        .filter(([key]) => key !== 'readBy') // Loại bỏ trường readBy phức tạp
+        .filter(([key]) => key !== 'readBy')
         .map(([key, value]) => {
           if (typeof value === 'object' && value !== null) {
             return `${key}: [Object]`;
@@ -468,7 +447,6 @@ const MessageItem = ({
           return `${key}: ${value}`;
         })
         .join(', ');
-      
       if (debugMode) {
         return (
           <div className="message-bubble debug-message">
@@ -481,8 +459,6 @@ const MessageItem = ({
                 Ẩn Debug
               </button>
             </div>
-            
-            {/* Hiển thị thời gian trong debug message */}
             <div className={`message-time-container-inside ${isCurrentUser ? 'user' : 'other'}`}>
               <span className="message-time">{formatTime(message.timestamp || message.createdAt || message.date)}</span>
               {isCurrentUser && renderMessageStatus()}
@@ -501,8 +477,6 @@ const MessageItem = ({
                 Hiển thị Debug
               </button>
             </div>
-            
-            {/* Hiển thị thời gian trong message không có nội dung */}
             <div className={`message-time-container-inside ${isCurrentUser ? 'user' : 'other'}`}>
               <span className="message-time">{formatTime(message.timestamp || message.createdAt || message.date)}</span>
               {isCurrentUser && renderMessageStatus()}
@@ -511,12 +485,16 @@ const MessageItem = ({
         );
       }
     }
-    
     return (
       <div className="message-bubble">
-        <div className="message-text">{textContent}</div>
-        
-        {/* Hiển thị thời gian bên trong bubble tin nhắn văn bản */}
+        <div className="message-text">
+          {textContent}
+          {message.edited && (
+            <span className="edited-label" style={{ color: "#888", marginLeft: 8 }}>
+              (đã chỉnh sửa)
+            </span>
+          )}
+        </div>
         <div className={`message-time-container-inside ${isCurrentUser ? 'user' : 'other'}`}>
           <span className="message-time">{formatTime(message.timestamp || message.createdAt || message.date)}</span>
           {isCurrentUser && renderMessageStatus()}
@@ -524,27 +502,21 @@ const MessageItem = ({
       </div>
     );
   };
-  
-  // Format file size
+
   const formatFileSize = (bytes) => {
     if (!bytes || isNaN(bytes)) return "";
-    
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
     let size = bytes;
     let unitIndex = 0;
-    
     while (size >= 1024 && unitIndex < units.length - 1) {
       size /= 1024;
       unitIndex++;
     }
-    
     return `${size.toFixed(1)} ${units[unitIndex]}`;
   };
 
-  // Get appropriate avatar for the participant
   const getAvatar = () => {
     if (!participant) return null;
-    
     if (participant.avatarUrl) {
       return (
         <div 
@@ -553,15 +525,11 @@ const MessageItem = ({
         />
       );
     }
-    
-    // Use initial letter if no avatar
     const initial = participant.firstName?.charAt(0) || 
                     participant.lastName?.charAt(0) || 
                     '?';
-                    
     const avatarColor = participant.avatarColor || 
                        `hsl(${(initial.charCodeAt(0) * 10 % 360)}, 70%, 50%)`;
-                        
     return (
       <div 
         className="message-avatar" 
@@ -572,9 +540,17 @@ const MessageItem = ({
     );
   };
 
+  // Nếu đã thu hồi thì không hover nữa
+  const isRecalled = message.type === "recalled" || message.message === "Tin nhắn đã được thu hồi";
+
   return (
     <>
-      <div className={`message-item ${isCurrentUser ? 'user' : 'other'}`}>
+      <div 
+        className={`message-item ${isCurrentUser ? 'user' : 'other'}`}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => { setHovered(false); setShowMore(false); }}
+        style={{ position: "relative" }}
+      >
         {/* Avatar của người gửi */}
         {shouldShowAvatar && (
           <div className="message-avatar-container">
@@ -592,15 +568,107 @@ const MessageItem = ({
           )}
 
           {/* Nội dung tin nhắn */}
-          {renderMessageContent()}
+          {isRecalled ? (
+            <div className="message-bubble recalled">
+              <span style={{ color: "#888" }}>Tin nhắn đã được thu hồi</span>
+            </div>
+          ) : (
+            <>
+              {/* Hiển thị phần trả lời nếu có */}
+              {message.replyTo && getReplyContent && (
+                <div className="reply-preview">
+                  <span className="reply-author">
+                    {getReplyAuthorName && getReplyAuthorName(message.replyTo)}
+                  </span>
+                  <span className="reply-content">
+                    {getReplyContent && getReplyContent(message.replyTo)}
+                  </span>
+                </div>
+              )}
+              {renderMessageContent()}
+              {/* Nút chức năng khi hover */}
+              {hovered && (
+                <div className="message-actions" style={{
+                  position: "absolute",
+                  top: 8,
+                  right: isCurrentUser ? "calc(100% + 8px)" : undefined,
+                  left: !isCurrentUser ? "calc(100% + 8px)" : undefined,
+                  display: "flex",
+                  gap: 8,
+                  zIndex: 10
+                }}>
+                  <button className="action-btn" title="Trả lời" onClick={handleReply}><FaReply /></button>
+                  <button className="action-btn" title="Chuyển tiếp" onClick={handleForward}><FaShare /></button>
+                  <div style={{ position: "relative" }}>
+                    <button className="action-btn" title="Thêm" onClick={() => setShowMore(v => !v)}><FaEllipsisV /></button>
+                    {showMore && (
+                      <div className="more-actions-popup" style={{
+                        position: "absolute",
+                        top: "100%",
+                        right: 0,
+                        background: "#fff",
+                        border: "1px solid #ccc",
+                        borderRadius: 6,
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                        zIndex: 100,
+                        minWidth: 120
+                      }}>
+                        {(!message.mediaUrl || message.mediaType === "text") && (
+                          <button className="more-action-btn" onClick={handleCopy}><FaCopy /> Copy</button>
+                        )}
+                        {(message.mediaUrl && message.mediaType !== "text") && (
+                          <button className="more-action-btn" onClick={() => handleDownload(message.mediaUrl, message.fileName)}><FaDownload /> Tải về máy</button>
+                        )}
+                        {isCurrentUser && (
+                          <button className="more-action-btn" onClick={handleRecall}><FaUndo /> Thu hồi</button>
+                        )}
+                        {isCurrentUser && typeof message.message === "string" && (
+                          <button
+                            className="more-action-btn"
+                            onClick={() => {
+                              if (typeof onStartEdit === "function") onStartEdit(message);
+                            }}
+                          >
+                            <FaEdit /> Sửa
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
-      
       {/* Modal xem trước media */}
       {viewingMedia && (
         <MediaViewerModal 
           media={viewingMedia} 
           onClose={() => setViewingMedia(null)}
+        />
+      )}
+      {/* Modal chuyển tiếp */}
+      {showForward && (
+        <ForwardModal
+          friends={friendsList}
+          onClose={() => setShowForward(false)}
+          onForward={async (friend) => {
+            await fetch("http://localhost:8080/api/messages/forward", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("idToken")}`,
+              },
+              body: JSON.stringify({
+                toUserId: friend.id,
+                messageId: message.id,
+                fromUserId: uid || message.sender,
+              }),
+            });
+            setShowForward(false);
+            if (typeof onForwardSuccess === "function") onForwardSuccess(friend);
+          }}
         />
       )}
     </>
