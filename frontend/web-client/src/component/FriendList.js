@@ -8,16 +8,28 @@ import { styled } from "@mui/material/styles";
 const SearchField = styled(TextField)(({ theme }) => ({
   margin: '10px 0',
   width: '100%',
+  fontFamily: 'Poppins, sans-serif',
   '& .MuiOutlinedInput-root': {
-    borderRadius: 25,
-    backgroundColor: '#f0f2f5',
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    border: '2px solid rgba(107, 89, 204, 0.1)',
+    transition: 'all 0.3s ease',
     '&:hover': {
-      backgroundColor: '#e4e6e9',
+      backgroundColor: '#fff',
+      borderColor: 'rgba(107, 89, 204, 0.2)',
     },
     '&.Mui-focused': {
       backgroundColor: '#fff',
-      boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+      borderColor: '#6b59cc',
+      boxShadow: '0 0 0 3px rgba(107, 89, 204, 0.1)',
     },
+  },
+  '& .MuiOutlinedInput-input': {
+    fontFamily: 'Poppins, sans-serif',
+    fontSize: '14px',
+  },
+  '& .MuiInputLabel-root': {
+    fontFamily: 'Poppins, sans-serif',
   },
 }));
 
@@ -29,10 +41,19 @@ const FriendAvatar = styled(Avatar)(({ theme }) => ({
 }));
 
 const ChatButton = styled(IconButton)(({ theme }) => ({
-  backgroundColor: '#1877f2',
+  background: 'linear-gradient(135deg, #6b59cc, #9a8bea)',
   color: '#fff',
+  width: 40,
+  height: 40,
+  boxShadow: '0 4px 15px rgba(107, 89, 204, 0.3)',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   '&:hover': {
-    backgroundColor: '#0d6efd',
+    background: 'linear-gradient(135deg, #4a3c9f, #6b59cc)',
+    boxShadow: '0 6px 20px rgba(107, 89, 204, 0.4)',
+    transform: 'translateY(-2px)',
+  },
+  '&:active': {
+    transform: 'translateY(0)',
   },
 }));
 
@@ -42,7 +63,20 @@ const EmptyState = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   justifyContent: 'center',
   padding: '40px 20px',
-  color: '#65676b',
+  color: 'rgba(107, 89, 204, 0.6)',
+  fontFamily: 'Poppins, sans-serif',
+  textAlign: 'center',
+  '& p': {
+    fontWeight: 600,
+    fontSize: '16px',
+    marginBottom: '8px',
+    color: 'rgba(107, 89, 204, 0.8)',
+  },
+  '& p:last-child': {
+    fontSize: '14px',
+    opacity: 0.7,
+    fontWeight: 400,
+  },
 }));
 
 const FriendList = ({ uid, token, onStartChat, onClose }) => {
@@ -116,18 +150,41 @@ const FriendList = ({ uid, token, onStartChat, onClose }) => {
   return (
     <div className="friend-sidebar">
       <div className="friend-sidebar-header">
-        <h2><FaUserFriends style={{ marginRight: '10px' }} /> Danh sách bạn bè</h2>
-        <Tooltip title="Làm mới danh sách" arrow>
+        <h2><FaUserFriends style={{ marginRight: '10px' }} /> Danh sách bạn bè</h2>        <Tooltip title="Làm mới danh sách" arrow>
           <Button 
             variant="contained" 
             size="small" 
-            color="primary" 
             onClick={fetchFriends} 
             disabled={loading}
             startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <FaSyncAlt />}
-            sx={{ minWidth: 'auto', borderRadius: '20px' }}
+            sx={{ 
+              minWidth: 'auto', 
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #6b59cc, #9a8bea)',
+              color: '#ffffff',
+              fontFamily: 'Poppins, sans-serif',
+              fontWeight: 600,
+              textTransform: 'none',
+              padding: '8px 16px',
+              boxShadow: '0 4px 15px rgba(107, 89, 204, 0.3)',
+              border: 'none',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #4a3c9f, #6b59cc)',
+                boxShadow: '0 6px 20px rgba(107, 89, 204, 0.4)',
+                transform: 'translateY(-1px)',
+              },
+              '&:active': {
+                transform: 'translateY(0)',
+              },
+              '&:disabled': {
+                background: 'linear-gradient(135deg, #c1c1c1, #d6d6d6)',
+                color: '#ffffff',
+                opacity: 0.7,
+              },
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
           >
-            {loading ? "" : "Làm mới"}
+            {loading ? "Đang tải..." : "Refresh"}
           </Button>
         </Tooltip>
       </div>

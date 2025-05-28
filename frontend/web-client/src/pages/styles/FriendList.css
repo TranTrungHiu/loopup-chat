@@ -1,16 +1,16 @@
 /* FriendList.css - Thiết kế đẹp và hiện đại cho component FriendList */
 
 .friend-sidebar {
-  width: 320px;
+  width: 350px;
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #fff;
-  border-right: 1px solid #e4e6eb;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
-  overflow-y: hidden;
+  background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
+  border-right: 1px solid rgba(107, 89, 204, 0.1);
+  box-shadow: 2px 0 15px rgba(107, 89, 204, 0.08);  overflow-y: hidden;
   z-index: 5;
   animation: slideIn 0.3s ease;
+  font-family: 'Inter', 'Nunito Sans', sans-serif;
 }
 
 @keyframes slideIn {
@@ -28,50 +28,81 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid #e4e6eb;
-  background-image: linear-gradient(to right, #1e014e, #2a0269);
+  padding: 20px 16px;
+  border-bottom: 1px solid rgba(107, 89, 204, 0.1);
+  background: linear-gradient(135deg, #6b59cc 0%, #9a8bea 100%);
   color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 15px rgba(107, 89, 204, 0.2);
+  position: relative;
+}
+
+.friend-sidebar-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='20' cy='20' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+  z-index: 0;
 }
 
 .friend-sidebar-header h2 {
   margin: 0;
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   display: flex;
   align-items: center;
+  font-family: 'Inter', 'Nunito Sans', sans-serif;
+  letter-spacing: -0.3px;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .friend-search {
-  padding: 10px 16px;
-  background-color: #f0f2f5;
-  border-bottom: 1px solid #e4e6eb;
+  padding: 16px;
+  background: rgba(248, 249, 250, 0.8);
+  border-bottom: 1px solid rgba(107, 89, 204, 0.1);
   position: sticky;
   top: 0;
   z-index: 2;
+  backdrop-filter: blur(10px);
 }
 
 /* Danh sách bạn bè */
 .MuiList-root {
   overflow-y: auto;
   height: calc(100vh - 130px);
-  padding: 0 !important;
+  padding: 8px 0 !important;
+  background: transparent;
 }
 
 .MuiListItem-root {
   padding: 12px 16px !important;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 12px !important;
+  margin: 4px 8px !important;
+  background: rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid transparent !important;
 }
 
 .MuiListItem-root:hover {
-  background-color: #f0f2f5;
+  background: rgba(107, 89, 204, 0.05) !important;
+  border-color: rgba(107, 89, 204, 0.1) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(107, 89, 204, 0.1);
 }
 
 .friend-name-text {
-  font-weight: 500;
+  font-weight: 600;
   display: flex;
   align-items: center;
+  font-family: 'Inter', 'Nunito Sans', sans-serif;
+  color: #2d3748;
+  font-size: 15px;
+  letter-spacing: -0.1px;
+  line-height: 1.4;
 }
 
 /* Loading state */
@@ -82,12 +113,14 @@
   justify-content: center;
   height: 100%;
   padding: 40px 0;
-  color: #65676b;
+  color: rgba(107, 89, 204, 0.7);
+  font-family: 'Inter', 'Nunito Sans', sans-serif;
 }
 
 .friend-loading p {
   margin-top: 16px;
   font-size: 14px;
+  font-weight: 500;
 }
 
 /* Error state */
@@ -108,20 +141,22 @@
 
 /* Custom scrollbar */
 .MuiList-root::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .MuiList-root::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: rgba(107, 89, 204, 0.05);
+  border-radius: 3px;
 }
 
 .MuiList-root::-webkit-scrollbar-thumb {
-  background: #c0c4cc;
-  border-radius: 10px;
+  background: linear-gradient(135deg, #6b59cc, #9a8bea);
+  border-radius: 3px;
+  transition: background 0.3s ease;
 }
 
 .MuiList-root::-webkit-scrollbar-thumb:hover {
-  background: #a8adb7;
+  background: linear-gradient(135deg, #4a3c9f, #6b59cc);
 }
 
 /* Mobile responsive styles */

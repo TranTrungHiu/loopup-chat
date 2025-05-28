@@ -20,9 +20,11 @@
 .logo {
   padding: 20px 10px;
   font-size: 18px;
-  font-weight: bold;
+  font-weight: 700;
   color: white;
   letter-spacing: 1px;
+  font-family: 'Inter', 'Nunito Sans', sans-serif;
+  text-align: center;
 }
 
 .sidebar-icons {
@@ -145,7 +147,7 @@
 
 /* Chat list styles */
 .chat-list {
-  width: 320px;
+  width: 350px;
   display: flex;
   flex-direction: column;
   border-right: 1px solid #e0e0e0;
@@ -159,9 +161,59 @@
   align-items: center;
   padding: 15px 20px;
   margin: 0;
-  background: #2D1053;
+  background: linear-gradient(135deg, #2D1053, #3A135E);
   color: white;
   border-radius: 0;
+  font-family: 'Inter', 'Nunito Sans', sans-serif;
+  font-weight: 600;
+  font-size: 18px;
+  box-shadow: 0 2px 8px rgba(45, 16, 83, 0.2);
+  letter-spacing: 0.02em;
+}
+
+/* Refresh button styling */
+.refresh-button {
+  background: linear-gradient(135deg, #6b59cc, #9a8bea);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;  font-family: 'Inter', 'Nunito Sans', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 4px 15px rgba(107, 89, 204, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 120px;
+  gap: 8px;
+}
+
+.refresh-button:hover {
+  background: linear-gradient(135deg, #4a3c9f, #6b59cc);
+  box-shadow: 0 6px 20px rgba(107, 89, 204, 0.4);
+  transform: translateY(-2px);
+}
+
+.refresh-button:active {
+  transform: translateY(0);
+}
+
+.refresh-button:disabled {
+  background: linear-gradient(135deg, #c1c1c1, #d6d6d6);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.refresh-button.rotating svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .chat-content {
@@ -176,48 +228,84 @@
 /* Search box styles */
 .search-box {
   display: flex;
-  padding: 10px 15px;
+  padding: 12px 10px;
   align-items: center;
-  border-bottom: 1px solid #e0e0e0;
-  background-color: #f0f0f0;
+  border-bottom: 1px solid rgba(107, 89, 204, 0.1);
+  background: linear-gradient(135deg, #f8f9fa, #ffffff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  position: relative;
+  gap: 10px;
 }
 
 .search-box input {
   flex: 1;
   border: none;
-  padding: 8px 12px;
+  padding: 10px 12px 10px 40px;
   border-radius: 20px;
   background-color: #ffffff;
-  margin: 0 10px;
   font-size: 14px;
+  font-family: 'Inter', 'Nunito Sans', sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
 }
 
 .search-box input:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(45, 16, 83, 0.2);
+  box-shadow: 0 0 0 3px rgba(107, 89, 204, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.search-box input::placeholder {
+  color: rgba(107, 89, 204, 0.6);
+  font-style: italic;
 }
 
 .search-icon {
-  color: #666;
-  font-size: 18px;
-  margin-right: 5px;
+  position: absolute;
+  left: 26px;
+  color: #6b59cc;
+  font-size: 16px;
+  pointer-events: none;
+  z-index: 1;
+  transition: color 0.3s ease;
+}
+
+.search-box:focus-within .search-icon {
+  color: #4a3c9f;
 }
 
 .icon-button {
-  background: transparent;
+  background: linear-gradient(135deg, #6b59cc, #9a8bea);
   border: none;
-  color: #2D1053;
+  color: white;
   cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
+  padding: 10px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(107, 89, 204, 0.3);
+  min-width: 44px;
+  height: 44px;
 }
 
 .icon-button:hover {
-  background: rgba(45, 16, 83, 0.1);
+  background: linear-gradient(135deg, #4a3c9f, #6b59cc);
+  box-shadow: 0 6px 20px rgba(107, 89, 204, 0.4);
+  transform: translateY(-2px);
+}
+
+.icon-button:active {
+  transform: translateY(0);
+}
+
+.icon-button:disabled {
+  background: linear-gradient(135deg, #c1c1c1, #d6d6d6);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Message area styles */

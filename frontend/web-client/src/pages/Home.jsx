@@ -172,16 +172,33 @@ const Home = () => {
       }
 
       // Lấy phần mở rộng của file
-      const extension = file.name.split('.').pop().toLowerCase();
-      
+      const extension = file.name.split(".").pop().toLowerCase();
+
       // Kiểm tra phần mở rộng file được hỗ trợ
-      const supportedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar'];
+      const supportedExtensions = [
+        "pdf",
+        "doc",
+        "docx",
+        "xls",
+        "xlsx",
+        "ppt",
+        "pptx",
+        "txt",
+        "zip",
+        "rar",
+      ];
       if (!supportedExtensions.includes(extension)) {
-        toast.warning(`Loại file ${extension} không được hỗ trợ. Hãy dùng: ${supportedExtensions.join(', ')}`);
+        toast.warning(
+          `Loại file ${extension} không được hỗ trợ. Hãy dùng: ${supportedExtensions.join(
+            ", "
+          )}`
+        );
         return;
       }
 
-      console.log(`Bắt đầu tải lên file: ${file.name} (${file.type}), kích thước: ${file.size} bytes`);
+      console.log(
+        `Bắt đầu tải lên file: ${file.name} (${file.type}), kích thước: ${file.size} bytes`
+      );
       toast.info(`Đang tải lên ${file.name}...`);
 
       const formData = new FormData();
@@ -207,7 +224,9 @@ const Home = () => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Server response:", response.status, errorText);
-        throw new Error(`Không thể gửi file: ${response.status} ${errorText || ''}`);
+        throw new Error(
+          `Không thể gửi file: ${response.status} ${errorText || ""}`
+        );
       }
 
       const data = await response.json();
@@ -1353,10 +1372,9 @@ const Home = () => {
 
   //Xử lý sau khi rời nhóm chat
   const handleLeaveCurrentChat = () => {
-    setCurrentChat(null); 
+    setCurrentChat(null);
     setTabs("");
   };
-  
 
   return (
     <div className="chat-container">
@@ -1452,25 +1470,35 @@ const Home = () => {
                 onClick={loadChats}
                 disabled={isLoadingChats}
               >
-                {isLoadingChats ? "⏳" : <FaSyncAlt size={20} />}
-              </button>
+                {isLoadingChats ? (
+                  <>
+                    <FaSyncAlt size={16} />
+                    <span>Đang tải...</span>
+                  </>
+                ) : (
+                  <>
+                    <FaSyncAlt size={16} />
+                    <span>Làm mới</span>
+                  </>
+                )}
+              </button>{" "}
             </h3>
             <div className="search-box">
-              <BiSearch className="search-icon" size={50} />
-              <input type="text" placeholder="Tìm kiếm" />
+              <BiSearch className="search-icon" />
+              <input type="text" placeholder="Tìm kiếm cuộc trò chuyện..." />
               <button
                 className="icon-button"
                 title="Tìm bạn"
                 onClick={() => setIsFindFriendModalOpen(true)}
               >
-                <FaUserPlus size={27} />
+                <FaUserPlus size={18} />
               </button>
               <button
                 className="icon-button"
                 title="Tạo nhóm"
                 onClick={() => setIsGroupModalOpen(true)}
               >
-                <FaUsers size={27} />
+                <FaUsers size={18} />
               </button>
             </div>
             <ChatList
@@ -1820,7 +1848,7 @@ const Home = () => {
             isAdmin={currentChat?.adminId === uid}
             chat={currentChat} // Thêm prop chat
             uid={uid}
-            onClose={()=> setChatInfor(false)}
+            onClose={() => setChatInfor(false)}
             onLeftGroup={handleLeaveCurrentChat}
           />
         )}

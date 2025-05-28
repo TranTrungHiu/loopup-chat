@@ -1,8 +1,11 @@
 :root {
-    --default-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    --default-font-family: 'Inter', 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
       Ubuntu, "Helvetica Neue", Helvetica, Arial, "PingFang SC",
       "Hiragino Sans GB", "Microsoft Yahei UI", "Microsoft Yahei",
       "Source Han Sans CN", sans-serif;
+    
+    /* Vietnamese text optimization */
+    --vietnamese-font-family: 'Inter', 'Nunito Sans', 'Roboto', 'Open Sans', sans-serif;
   }
   
   .main-container {
@@ -93,7 +96,7 @@
     top: 27px;
     left: 97px;
     color: #000000;
-    font-family: Public Sans, var(--default-font-family);
+    font-family: var(--vietnamese-font-family);
     font-size: 18px;
     font-weight: 400;
     line-height: 21px;
@@ -135,7 +138,7 @@
     top: calc(50% - 9.5px);
     left: calc(50% - 129px);
     color: rgba(0, 0, 0, 0.41);
-    font-family: Public Sans, var(--default-font-family);
+    font-family: var(--vietnamese-font-family);
     font-size: 18px;
     font-weight: 400;
     line-height: 21px;
@@ -189,7 +192,7 @@
     top: calc(50% - 11.5px);
     left: 76px;
     color: rgba(0, 0, 0, 0.21);
-    font-family: Public Sans, var(--default-font-family);
+    font-family: var(--vietnamese-font-family);
     font-size: 18px;
     font-weight: 400;
     line-height: 21px;
@@ -213,7 +216,7 @@
     height: 15px;
     top: 260px;
     left: 302px;
-    font-family: Public Sans, var(--default-font-family);
+    font-family: var(--vietnamese-font-family);
     font-size: 13px;
     font-weight: 300;
     line-height: 15px;
@@ -226,7 +229,7 @@
   .text-4 {
     position: relative;
     color: #d26767;
-    font-family: Public Sans, var(--default-font-family);
+    font-family: var(--vietnamese-font-family);
     font-size: 13px;
     font-weight: 300;
     line-height: 15.275px;
@@ -237,7 +240,7 @@
   .text-5 {
     position: relative;
     color: #d26767;
-    font-family: Public Sans, var(--default-font-family);
+    font-family: var(--vietnamese-font-family);
     font-size: 13px;
     font-weight: 300;
     line-height: 15.275px;
@@ -254,7 +257,7 @@
     top: 264px;
     left: 70px;
     color: #372e7c;
-    font-family: Public Sans, var(--default-font-family);
+    font-family: var(--vietnamese-font-family);
     font-size: 14px;
     font-weight: 400;
     line-height: 16px;
@@ -334,7 +337,7 @@
     top: 15px;
     left: 24px;
     color: #ffffff;
-    font-family: Roboto, var(--default-font-family);
+    font-family: var(--vietnamese-font-family);
     font-size: 17.600000381469727px;
     font-weight: 700;
     line-height: 20.625px;
@@ -363,7 +366,7 @@
     top: calc(50% - 7px);
     left: calc(50% - 52.5px);
     color: #ffffff;
-    font-family: Roboto, var(--default-font-family);
+    font-family: var(--vietnamese-font-family);
     font-size: 16px;
     font-weight: 700;
     line-height: 18.75px;
@@ -380,7 +383,7 @@
     top: 299px;
     left: 22px;
     color: #000000;
-    font-family: Public Sans, var(--default-font-family);
+    font-family: var(--vietnamese-font-family);
     font-size: 18px;
     font-weight: 400;
     line-height: 21px;
@@ -397,7 +400,7 @@
     top: calc(50% - -143.5px);
     left: 180px;
     color: rgba(0, 0, 0, 0.73);
-    font-family: Public Sans, var(--default-font-family);
+    font-family: var(--vietnamese-font-family);
     font-size: 15px;
     font-weight: 400;
     line-height: 17.625px;
@@ -476,7 +479,7 @@
     width: 263px;
     height: 18px;
     margin: 52px 0 0 275px;
-    font-family: Public Sans, var(--default-font-family);
+    font-family: var(--vietnamese-font-family);
     font-size: 15px;
     font-weight: 400;
     line-height: 17.625px;
@@ -488,7 +491,7 @@
   .text-b {
     position: relative;
     color: #000000;
-    font-family: Public Sans, var(--default-font-family);
+    font-family: var(--vietnamese-font-family);
     font-size: 15px;
     font-weight: 400;
     line-height: 18px;
@@ -497,7 +500,7 @@
   .text-c {
     position: relative;
     color: #665a00;
-    font-family: Public Sans, var(--default-font-family);
+    font-family: var(--vietnamese-font-family);
     font-size: 15px;
     font-weight: 400;
     line-height: 18px;
@@ -526,7 +529,7 @@
     top: calc(50% - 254px);
     left: calc(50% - 20px);
     color: #080e8c;
-    font-family: Rowdies, var(--default-font-family);
+    font-family: 'Rowdies', cursive, var(--default-font-family);
     font-size: 45px;
     font-weight: 400;
     line-height: 55.89px;

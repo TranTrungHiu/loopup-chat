@@ -11,6 +11,7 @@ const CreateGroupModal = ({ onClose, userId }) => {
     const [friendList, setFriendList] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [isCreating, setIsCreating] = useState(false);
+    const [validationError, setValidationError] = useState("");
     const token = localStorage.getItem("idToken");
 
     useEffect(() => {
@@ -54,11 +55,25 @@ const CreateGroupModal = ({ onClose, userId }) => {
     };
 
     const handleCreateGroup = async () => {
-        if (selectedUsers.length < 2 || groupName.trim() === "") {
+        // Clear previous errors
+        setValidationError("");
+
+        // Validation
+        if (groupName.trim() === "") {
+            setValidationError("Vui lòng nhập tên nhóm");
+            return;
+        }
+        if (groupName.trim().length < 2) {
+            setValidationError("Tên nhóm phải có ít nhất 2 ký tự");
+            return;
+        }
+        if (selectedUsers.length < 2) {
+            setValidationError("Vui lòng chọn ít nhất 2 thành viên");
             return;
         }
 
         setIsCreating(true);
+        setValidationError(""); // Reset validation error
 
         try {
             // Chuẩn bị danh sách thành viên (bao gồm cả người tạo nhóm)
@@ -115,8 +130,43 @@ const CreateGroupModal = ({ onClose, userId }) => {
         }
     };
 
-    return (
-        <div className="fixed inset-0 bg-black/60 z-70 flex items-center justify-center">
+    // Handle keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                if (selectedUsers.length >= 2 && groupName.trim() !== "" && !isCreating) {
+                    handleCreateGroup();
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [onClose, selectedUsers, groupName, isCreating]);
+
+    // Clear validation error when user types
+    useEffect(() => {
+        if (validationError && (groupName.trim() || selectedUsers.length > 0)) {
+            setValidationError("");
+        }
+    }, [groupName, selectedUsers, validationError]);    return (
+        <div className="fixed inset-0 bg-black/60 z-70 flex items-center justify-center p-4" style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            overflow: 'auto'
+        }}>
             <div className="group-modal">
                 {/* Header */}
                 <div className="modal-header">
@@ -131,7 +181,7 @@ const CreateGroupModal = ({ onClose, userId }) => {
                 {/* Nhập tên nhóm */}
                 <input
                     type="text"
-                    placeholder="Nhập tên nhóm..."
+                    placeholder="Nhập tên nhóm... (Ctrl+Enter để tạo)"
                     value={groupName}
                     onChange={(e) => setGroupName(e.target.value)}
                     className="group-name-input"
@@ -144,13 +194,14 @@ const CreateGroupModal = ({ onClose, userId }) => {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="search-input"
-                />
-
-                {/* Nội dung */}
+                />                {/* Nội dung */}
                 <div className="modal-body">
                     {/* Danh sách bạn bè */}
                     <div className="friend-list">
-                        <h3>Trò chuyện gần đây</h3>
+                        <h3>
+                            Danh sách bạn bè
+                            <span className="friend-count-badge">{filteredFriends.length}</span>
+                        </h3>
                         <div className="friend-grid">
                             {filteredFriends.map((user) => {
                                 const isSelected = selectedUsers.find((u) => u.id === user.id);
@@ -172,6 +223,15 @@ const CreateGroupModal = ({ onClose, userId }) => {
                                     </div>
                                 );
                             })}
+
+                            {/* Empty State cho danh sách bạn bè */}
+                            {filteredFriends.length === 0 && (
+                                <div className="empty-state">
+                                    <FaUsers className="empty-icon" />
+                                    <p>Không tìm thấy bạn bè nào</p>
+                                    <span>Hãy thử tìm kiếm với từ khóa khác</span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -192,14 +252,37 @@ const CreateGroupModal = ({ onClose, userId }) => {
                                         </span>
                                     </div>
                                     <X
-                                        size={14}
-                                        className="ml-2 cursor-pointer hover:text-red-300"
+                                        size={16}
+                                        className="remove-user-btn"
                                         onClick={() => toggleUser(user)}
                                     />
                                 </div>
                             ))}
+
+                            {/* Empty State cho danh sách đã chọn */}
+                            {selectedUsers.length === 0 && (
+                                <div className="empty-state">
+                                    <div className="empty-icon">👥</div>
+                                    <p>Chưa chọn thành viên nào</p>
+                                    <span>Chọn ít nhất 2 người để tạo nhóm</span>
+                                </div>
+                            )}
                         </div>
                     </div>
+
+                    {/* Thông báo lỗi validation */}
+                    {validationError && (
+                        <div className="validation-error">
+                            {validationError}
+                        </div>
+                    )}
+
+                    {/* Validation Error Message */}
+                    {validationError && (
+                        <div className="validation-message">
+                            {validationError}
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer */}
@@ -219,6 +302,16 @@ const CreateGroupModal = ({ onClose, userId }) => {
                         )}
                     </button>
                 </div>
+
+                {/* Loading Overlay */}
+                {isCreating && (
+                    <div className="modal-loading-overlay">
+                        <div className="loading-content">
+                            <FaSpinner className="spinner" />
+                            <p>Đang tạo nhóm chat...</p>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
