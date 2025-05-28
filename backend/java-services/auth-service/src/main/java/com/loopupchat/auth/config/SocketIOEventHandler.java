@@ -164,9 +164,7 @@ public class SocketIOEventHandler {
                 socketServer.getRoomOperations(chatId).sendEvent("typing_indicator", typingData);
                 logger.info("Broadcasted typing_end for user {} in chat {}", userId, chatId);
             }
-        });
-
-        // Listen for USER_STATUS events (online/offline)
+        });        // Listen for USER_STATUS events (online/offline)
         socketServer.addEventListener("user_status", Map.class, (client, data, ackRequest) -> {
             String userId = (String) data.get("userId");
             String status = (String) data.get("status"); // "online" or "offline"
@@ -189,6 +187,42 @@ public class SocketIOEventHandler {
                 
                 socketServer.getBroadcastOperations().sendEvent("user_status_changed", statusData);
                 logger.info("Broadcasted status change for user {}: {}", userId, status);
+            }
+        });
+
+        // Listen for USER_LOGIN events
+        socketServer.addEventListener("user_login", Map.class, (client, data, ackRequest) -> {
+            logger.info("=== USER LOGIN EVENT RECEIVED ===");
+            String userId = (String) data.get("userId");
+            String email = (String) data.get("email");
+            
+            if (userId != null) {
+                logger.info("User {} logged in with email: {}", userId, email);
+                
+                // Update session mapping
+                sessionUserMap.put(client.getSessionId(), userId);
+                // Join user's personal room
+                client.joinRoom("user_" + userId);
+                
+                // Broadcast login notification to all connected clients
+                Map<String, Object> loginData = new HashMap<>();
+                loginData.put("userId", userId);
+                loginData.put("email", email);
+                loginData.put("status", "login");
+                loginData.put("timestamp", System.currentTimeMillis());
+                
+                socketServer.getBroadcastOperations().sendEvent("user_login_notification", loginData);
+                logger.info("✓ Broadcasted login notification for user: {}", userId);
+                
+                // Send acknowledgment if requested
+                if (ackRequest.isAckRequested()) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("status", "success");
+                    response.put("message", "Login notification sent");
+                    ackRequest.sendAckData(response);
+                }
+            } else {
+                logger.warn("✗ Received login event without userId");
             }
         });
     }

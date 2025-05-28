@@ -402,9 +402,7 @@ public class SocketIOService {
             System.err.println("❌ No session found for user " + userId);
             System.err.println("Available sessions: " + userToSessionMapping);
         }
-    }
-
-    // Helper method để gửi tin nhắn đến tất cả người dùng
+    }    // Helper method để gửi tin nhắn đến tất cả người dùng
     public void broadcastMessage(String eventName, Object data) {
         server.getBroadcastOperations().sendEvent(eventName, data);
     }
@@ -417,6 +415,31 @@ public class SocketIOService {
     // Helper method để lấy danh sách người dùng online
     public Iterable<String> getOnlineUsers() {
         return userToSessionMapping.keySet();
+    }
+
+    // Thông báo khi người dùng đăng nhập thành công
+    public void notifyUserLogin(String userId, String email) {
+        try {
+            System.out.println("=== USER LOGIN NOTIFICATION ===");
+            System.out.println("User ID: " + userId);
+            System.out.println("Email: " + email);
+            
+            // Tạo dữ liệu thông báo đăng nhập
+            Map<String, Object> loginData = new ConcurrentHashMap<>();
+            loginData.put("userId", userId);
+            loginData.put("email", email);
+            loginData.put("timestamp", System.currentTimeMillis());
+            loginData.put("status", "online");
+            
+            // Broadcast thông báo đến tất cả các client đang kết nối
+            server.getBroadcastOperations().sendEvent("user_login", loginData);
+            
+            System.out.println("✓ Broadcasted user login notification for user: " + userId);
+            
+        } catch (Exception e) {
+            System.err.println("Error sending login notification: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     @PreDestroy

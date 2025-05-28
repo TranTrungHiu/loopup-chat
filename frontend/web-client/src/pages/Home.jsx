@@ -79,7 +79,10 @@ import {
   onNewMessage,
   onChatUpdated,
   onMessageRead,
+  onUserLogin,
+  onUserStatusChange,
   emitMessageRead,
+  emitUserStatus,
 } from "../services/socketService";
 import ChatList from "../component/ChatList";
 import VideoCall from "../component/VideoCall";
@@ -1128,6 +1131,11 @@ const Home = () => {
     // Kết nối với socket server
     const socket = connectSocket(uid);
 
+    // Emit user status as online when connected
+    setTimeout(() => {
+      emitUserStatus(uid, 'online');
+    }, 1000);
+
     // Đăng ký các sự kiện socket
     const newMessageUnsub = onNewMessage((message) => {
       console.log("New message received:", message);
@@ -1190,9 +1198,7 @@ const Home = () => {
     const chatUpdatedUnsub = onChatUpdated((data) => {
       console.log("Chat updated:", data);
       loadChats();
-    });
-
-    // Xử lý sự kiện tin nhắn đã đọc
+    });    // Xử lý sự kiện tin nhắn đã đọc
     const messageReadUnsub = onMessageRead((data) => {
       console.log("Message read event received:", data);
 
@@ -1226,13 +1232,76 @@ const Home = () => {
           return msg;
         })
       );
-    });
+    });    // Xử lý sự kiện đăng nhập người dùng
+    const userLoginUnsub = onUserLogin((data) => {
+      console.log("User login notification received:", data);
+      
+      // Kiểm tra dữ liệu hợp lệ
+      if (!data || !data.userId || !data.email) {
+        console.error("Invalid user login event data:", data);
+        return;
+      }
 
-    // Cleanup khi component bị hủy
+      // Cập nhật trạng thái online cho người dùng trong participantsInfo
+      setParticipantsInfo((prev) => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(chatId => {
+          if (updated[chatId] && updated[chatId].uid === data.userId) {
+            updated[chatId] = {
+              ...updated[chatId],
+              isOnline: true,
+              status: 'online'
+            };
+          }
+        });
+        return updated;
+      });
+    });    // Xử lý sự kiện thay đổi trạng thái người dùng (online/offline)
+    const userStatusUnsub = onUserStatusChange((data) => {
+      console.log("User status change notification received:", data);
+      
+      // Kiểm tra dữ liệu hợp lệ
+      if (!data || !data.userId || !data.status) {
+        console.error("Invalid user status change event data:", data);
+        return;
+      }
+
+      // Cập nhật trạng thái trong participantsInfo
+      setParticipantsInfo((prev) => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(chatId => {
+          if (updated[chatId] && updated[chatId].uid === data.userId) {
+            updated[chatId] = {
+              ...updated[chatId],
+              isOnline: data.status === 'online',
+              status: data.status,
+              lastSeen: data.status === 'offline' ? new Date().toISOString() : updated[chatId].lastSeen
+            };
+          }
+        });
+        return updated;
+      });
+
+      // Cập nhật currentParticipant nếu đang xem chat với người này
+      if (currentParticipant && currentParticipant.uid === data.userId) {
+        setCurrentParticipant(prev => ({
+          ...prev,
+          isOnline: data.status === 'online',
+          status: data.status,
+          lastSeen: data.status === 'offline' ? new Date().toISOString() : prev.lastSeen
+        }));
+      }
+    });    // Cleanup khi component bị hủy
     return () => {
       newMessageUnsub();
       chatUpdatedUnsub();
       messageReadUnsub();
+      userLoginUnsub();
+      userStatusUnsub();
+      
+      // Emit user status as offline when disconnecting
+      emitUserStatus(uid, 'offline');
+      
       disconnectSocket();
     };
   }, [uid, currentChat]);
@@ -1375,6 +1444,35 @@ const Home = () => {
     setCurrentChat(null);
     setTabs("");
   };
+
+  // Handle page visibility change to update user status
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!uid) return;
+      
+      if (document.hidden) {
+        // User switched tabs or minimized window - mark as offline
+        emitUserStatus(uid, 'offline');
+      } else {
+        // User came back - mark as online
+        emitUserStatus(uid, 'online');
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      if (uid) {
+        emitUserStatus(uid, 'offline');
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [uid]);
 
   return (
     <div className="chat-container">

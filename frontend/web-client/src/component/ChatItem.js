@@ -137,8 +137,7 @@ const ChatItem = ({ chat, participant, userStatuses, isActive, onSelect }) => {
     <div 
       className={`chat-item ${isActive ? 'active' : ''} ${chat.unread > 0 ? 'unread' : ''}`}
       onClick={() => onSelect(chat)}
-    >
-      <div className="avatar-container">
+    >      <div className="avatar-container">
         {participant?.avatarUrl && !isGroupChat ? (
           <div 
             className="avatar" 
@@ -152,7 +151,12 @@ const ChatItem = ({ chat, participant, userStatuses, isActive, onSelect }) => {
             {isGroupChat ? <FaUsers /> : <span>{getAvatarInitials()}</span>}
           </div>
         )}
-        {participant?.isOnline && !isGroupChat && <span className="status-indicator"></span>}
+        {/* Online status indicator - only show for non-group chats */}
+        {!isGroupChat && (
+          <div className={`status-indicator ${participant?.isOnline ? 'online' : 'offline'}`}>
+            <div className="status-dot"></div>
+          </div>
+        )}
       </div>
       
       <div className="chat-details">

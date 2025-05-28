@@ -240,11 +240,10 @@ const FriendList = ({ uid, token, onStartChat, onClose }) => {
                     {!friend.avatarUrl && getInitials(friend.firstName, friend.lastName)}
                   </FriendAvatar>
                 </ListItemAvatar>
-                <ListItemText
-                  primary={
+                <ListItemText                  primary={
                     <span className="friend-name-text">
                       {friend.firstName} {friend.lastName}
-                      {friend.isOnline && 
+                      {(friend.isOnline || friend.status === 'online') && 
                         <Chip 
                           label="online" 
                           color="success" 

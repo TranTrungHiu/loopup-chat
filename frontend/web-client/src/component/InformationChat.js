@@ -96,11 +96,9 @@ const InformationChat = ({ isGroupChat, isAdmin, user, chat, uid, onClose  }) =>
       
       
 
-    const fullName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
-
-    // Xác định trạng thái online của người dùng
+    const fullName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();    // Xác định trạng thái online của người dùng
     const isUserOnline = user?.isOnline || user?.status === 'online';
-    const lastActive = user?.lastActive ? new Date(user.lastActive) : null;
+    const lastActive = user?.lastActive || user?.lastSeen ? new Date(user.lastActive || user.lastSeen) : null;
     
     // Định dạng thời gian hoạt động cuối
     const formatLastActive = () => {
@@ -284,6 +282,18 @@ const InformationChat = ({ isGroupChat, isAdmin, user, chat, uid, onClose  }) =>
                             <Button variant="outlined" color="error" onClick={handleLeaveGroup}>Rời nhóm</Button>
                         </div>
                     </>
+                    )}
+
+                    {/* Status display section for non-group chats */}
+                    {!isGroupChat && (
+                        <div className="status-display-section">
+                            <div className="status-indicator">
+                                <div className={`status-dot ${isUserOnline ? 'online' : 'offline'}`}></div>
+                                <span className="status-text">
+                                    {isUserOnline ? "Đang hoạt động" : `Hoạt động ${formatLastActive()}`}
+                                </span>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>

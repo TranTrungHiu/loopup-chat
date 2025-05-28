@@ -31,6 +31,7 @@ import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
+import com.loopupchat.auth.service.SocketIOService;
 
 import java.net.URL;
 import java.util.Date;
@@ -39,9 +40,11 @@ import java.util.Date;
 @RequestMapping("/api/auth")
 public class AuthController {
     private final FirebaseAuth firebaseAuth;
+    private final SocketIOService socketIOService;
 
-    public AuthController(FirebaseAuth firebaseAuth) {
+    public AuthController(FirebaseAuth firebaseAuth, SocketIOService socketIOService) {
         this.firebaseAuth = firebaseAuth;
+        this.socketIOService = socketIOService;
     }
 
     @PostMapping("/signup")
@@ -71,9 +74,7 @@ public class AuthController {
         } catch (FirebaseAuthException e) {
             return ResponseEntity.badRequest().body(Map.of("message", "Lỗi: " + e.getMessage()));
         }
-    }
-
-    @PostMapping("/login")
+    }    @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
             // Firebase không hỗ trợ đăng nhập bằng email+password từ backend,
@@ -86,6 +87,9 @@ public class AuthController {
             // Nếu hợp lệ
             String uid = decodedToken.getUid();
             String email = decodedToken.getEmail();
+
+            // Thông báo đăng nhập thành công qua Socket.IO
+            socketIOService.notifyUserLogin(uid, email);
 
             // Trả về thông tin hoặc JWT (nếu bạn sử dụng riêng)
             return ResponseEntity.ok(Map.of(

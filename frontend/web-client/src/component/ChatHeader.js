@@ -5,8 +5,7 @@ import "../pages/styles/ChatHeader.css";
 const ChatHeader = ({ currentChat, currentParticipant, onInfoClick, onVideoCall, onSearch }) => {
   // Xác định xem chat có phải là nhóm hay không
   const isGroupChat = currentChat?.isGroupChat || false;
-  
-  // Lấy status hiện tại của người dùng
+    // Lấy status hiện tại của người dùng
   const getUserStatus = () => {
     if (isGroupChat) {
       const participantCount = currentChat?.participants ? Object.keys(currentChat.participants).length : 0;
@@ -16,7 +15,11 @@ const ChatHeader = ({ currentChat, currentParticipant, onInfoClick, onVideoCall,
     if (!currentParticipant) return "Không hoạt động";
     
     if (currentParticipant.isLoading) return "Đang tải...";
-    if (currentParticipant.isOnline) return "Đang hoạt động";
+    
+    // Kiểm tra trạng thái online
+    if (currentParticipant.isOnline || currentParticipant.status === 'online') {
+      return "Đang hoạt động";
+    }
     
     if (currentParticipant.lastSeen) {
       try {
@@ -98,12 +101,14 @@ const ChatHeader = ({ currentChat, currentParticipant, onInfoClick, onVideoCall,
             style={{ backgroundColor: getAvatarBackground() }}
           >
             {isGroupChat ? <FaUsers /> : <span>{getAvatarInitials()}</span>}
+          </div>        )}
+        
+        {/* Online status indicator - only show for non-group chats */}
+        {!isGroupChat && (
+          <div className={`header-status-indicator ${(currentParticipant?.isOnline || currentParticipant?.status === 'online') ? 'online' : 'offline'}`}>
+            <div className="header-status-dot"></div>
           </div>
         )}
-        
-        {currentParticipant?.isOnline && !isGroupChat && 
-          <span className="status-dot"></span>
-        }
       </div>
       
       <div className="user-info" onClick={onInfoClick}>

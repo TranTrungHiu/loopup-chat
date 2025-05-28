@@ -114,6 +114,59 @@
   transform: translateY(0);
 }
 
+/* Header status indicator styles */
+.header-status-indicator {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #3A135E;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+/* Online status styles for header */
+.header-status-indicator.online .header-status-dot {
+  background-color: #4CAF50;
+  box-shadow: 0 0 0 1px rgba(76, 175, 80, 0.3);
+}
+
+.header-status-indicator.online {
+  animation: headerPulseOnline 2s infinite;
+}
+
+@keyframes headerPulseOnline {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7), 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+  70% {
+    box-shadow: 0 0 0 4px rgba(76, 175, 80, 0), 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0), 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Offline status styles for header */
+.header-status-indicator.offline .header-status-dot {
+  background-color: #bbb;
+}
+
+.header-status-indicator.offline {
+  opacity: 0.8;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .chat-header {

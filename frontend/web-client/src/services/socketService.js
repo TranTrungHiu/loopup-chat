@@ -7,6 +7,8 @@ export { socket };
 let messageCallbacks = [];
 let chatUpdateCallbacks = [];
 let messageReadCallbacks = [];
+let userLoginCallbacks = [];
+let userStatusCallbacks = [];
 let connectionAttempts = 0;
 const MAX_RECONNECTION_ATTEMPTS = 5;
 
@@ -165,11 +167,27 @@ export const connectSocket = (userId) => {
     // Listen for connection status confirmation from backend
     socket.on('connection_status', (data) => {
       console.log('Nhận trạng thái kết nối từ server:', data);
-    });
-
-    // Listen for user registration confirmation
+    });    // Listen for user registration confirmation
     socket.on('user_registered', (data) => {
       console.log('Xác nhận đăng ký người dùng:', data);
+    });
+
+    // Listen for user login notifications
+    socket.on('user_login_notification', (data) => {
+      console.log('Thông báo người dùng đăng nhập:', data);
+      userLoginCallbacks.forEach(callback => callback(data));
+    });
+
+    // Listen for user status changes (online/offline)
+    socket.on('user_status_changed', (data) => {
+      console.log('Thay đổi trạng thái người dùng:', data);
+      userStatusCallbacks.forEach(callback => callback(data));
+    });
+
+    // Listen for general user login events
+    socket.on('user_login', (data) => {
+      console.log('Sự kiện đăng nhập người dùng:', data);
+      userLoginCallbacks.forEach(callback => callback(data));
     });
 
     return socket;
@@ -225,6 +243,20 @@ export const onMessageRead = (callback) => {
   };
 };
 
+export const onUserLogin = (callback) => {
+  userLoginCallbacks.push(callback);
+  return () => {
+    userLoginCallbacks = userLoginCallbacks.filter(cb => cb !== callback);
+  };
+};
+
+export const onUserStatusChange = (callback) => {
+  userStatusCallbacks.push(callback);
+  return () => {
+    userStatusCallbacks = userStatusCallbacks.filter(cb => cb !== callback);
+  };
+};
+
 // Add direct function to emit message read events
 export const emitMessageRead = (messageId, userId, chatId) => {
   if (socket && socket.connected) {
@@ -250,4 +282,18 @@ export const reconnectSocket = (userId) => {
   connectionAttempts = 0;
   currentPortIndex = 0;
   return connectSocket(userId);
+};
+
+// Emit user status to server
+export const emitUserStatus = (userId, status) => {
+  if (socket && socket.connected) {
+    console.log(`Emitting user status: ${userId} - ${status}`);
+    socket.emit('user_status', {
+      userId: userId,
+      status: status,
+      timestamp: new Date().toISOString()
+    });
+  } else {
+    console.warn('Socket not connected, cannot emit user status');
+  }
 };
