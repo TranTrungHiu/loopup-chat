@@ -2,15 +2,14 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAV-OvLPWBeJ5BaHXPVKXQrK5u6wJkzmjw",
-  authDomain: "loopup-chat-9b825.firebaseapp.com",
-  projectId: "loopup-chat-9b825",
-  storageBucket: "loopup-chat-9b825.firebasestorage.app",
-  messagingSenderId: "958587571939",
-  appId: "1:958587571939:web:92b4ac2bf5203a62c37fd6",
-  measurementId: "G-51X3LKWKJN"
+  apiKey: "AIzaSyBIP6tmOAADrQixIkWWPgLoJZZuj8Y4yOc",
+  authDomain: "loopup-2126c.firebaseapp.com",
+  projectId: "loopup-2126c",
+  storageBucket: "loopup-2126c.firebasestorage.app",
+  messagingSenderId: "1032067116179",
+  appId: "1:1032067116179:web:c73549ed13aae079a0b166",
+  measurementId: "G-D35V67HST0"
 };
-
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
