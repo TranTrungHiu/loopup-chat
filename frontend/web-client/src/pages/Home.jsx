@@ -127,6 +127,22 @@ const Home = () => {
   const [isForwardModalOpen, setIsForwardModalOpen] = useState(false);
   const [forwardingMessage, setForwardingMessage] = useState(null);
   const [forwardLoading, setForwardLoading] = useState(false);
+  const badWords = [
+  "địt", "cặc", "lồn", "đụ", "đéo", "vcl", "clm", "dm", "dmm", "fuck", "shit", "bitch", "ngu", "đần","đĩ", "con mẹ", "chết", "tự tử", "dốt",
+];
+  const [badWordsFound, setBadWordsFound] = useState([]);
+  const [badWordDetected, setBadWordDetected] = useState(false);
+
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setNewMessage(value);
+
+    const lowerMsg = value.toLowerCase();
+    // Tìm tất cả từ cấm xuất hiện trong tin nhắn
+    const found = badWords.filter(word => lowerMsg.includes(word));
+    setBadWordsFound(found);
+    setBadWordDetected(found.length > 0);
+  };
 
 
     // Lấy userName từ userInfo hoặc uid
@@ -666,7 +682,10 @@ const Home = () => {
   if (!currentChat || !newMessage.trim()) return;
 
   const trimmedMessage = newMessage.trim();
-
+  if (badWordDetected) {
+    toast.warning("Tin nhắn chứa từ không phù hợp. Vui lòng sửa lại!");
+    return;
+  }
   // Nếu đang sửa tin nhắn
   if (editingMessage) {
     if (trimmedMessage === editingMessage.message) {
@@ -1410,12 +1429,18 @@ useEffect(() => {
                     type="text"
                     placeholder="Tin nhắn..."
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={handleInputChange}
                     onFocus={handleInputFocus}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleSendMessage();
                     }}
+                    style={badWordDetected ? { border: "1px solid red", background: "#fff0f0" } : {}}
                   />
+                  {badWordDetected && (
+                    <div style={{ color: "red", marginTop: 4 }}>
+                      Tin nhắn chứa từ không phù hợp: <b>{badWordsFound.join(", ")}</b>
+                    </div>
+                  )}
 
                   <div className="input-actions">
                     {/* File Upload */}
@@ -1453,7 +1478,11 @@ useEffect(() => {
                     <button
                       className="send-btn"
                       onClick={handleSendMessage}
-                      disabled={!newMessage.trim()|| (editingMessage && newMessage.trim() === editingMessage.message)}
+                      disabled={
+                        !newMessage.trim() ||
+                        (editingMessage && newMessage.trim() === editingMessage.message) ||
+                        badWordDetected
+                      }
                     >
                       <BsSendFill />
                     </button>
