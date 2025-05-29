@@ -1,11 +1,23 @@
 import axios from "axios";
 import { signOut, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
+import { emitUserStatus, disconnectSocket } from "./socketService";
 
 export const handleLogout = async (navigate) => {
+  // Emit offline status before logging out
+  const uid = localStorage.getItem("uid");
+  if (uid) {
+    emitUserStatus(uid, 'offline');
+    // Clear the session storage flag so status will be emitted on next login
+    sessionStorage.removeItem(`online_status_emitted_${uid}`);
+  }
+  
+  // Disconnect socket
+  disconnectSocket();
+  
   await signOut(auth);
   localStorage.clear();
-  navigate("/signin");
+  navigate("/");
 };
 
 export const handleSignIn = async (email, pass, navigate, setMsg) => {

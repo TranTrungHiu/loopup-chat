@@ -99,13 +99,13 @@ public class SocketIOService {
             public void onData(SocketIOClient client, String chatId, AckRequest ackRequest) {
                 handleTypingStart(client, chatId, ackRequest);
             }
-        });        // Xử lý sự kiện kết thúc typing
+        }); // Xử lý sự kiện kết thúc typing
         server.addEventListener("typing_end", String.class, new DataListener<String>() {
             @Override
             public void onData(SocketIOClient client, String chatId, AckRequest ackRequest) {
                 handleTypingEnd(client, chatId, ackRequest);
             }
-        });        // Xử lý sự kiện tạo nhóm
+        }); // Xử lý sự kiện tạo nhóm
         server.addEventListener("group_created", Map.class, new DataListener<Map>() {
             @Override
             public void onData(SocketIOClient client, Map groupData, AckRequest ackRequest) {
@@ -284,7 +284,9 @@ public class SocketIOService {
                 "userId", userId,
                 "chatId", chatId,
                 "isTyping", true));
-    }    private void handleTypingEnd(SocketIOClient client, String chatId, AckRequest ackRequest) {
+    }
+
+    private void handleTypingEnd(SocketIOClient client, String chatId, AckRequest ackRequest) {
         String userId = sessionToUserMapping.get(client.getSessionId());
         if (userId == null) {
             sendErrorResponse(client, "typing_response", "Người dùng chưa được xác thực", ackRequest);
@@ -296,10 +298,12 @@ public class SocketIOService {
                 "userId", userId,
                 "chatId", chatId,
                 "isTyping", false));
-    }    private void handleGroupCreated(SocketIOClient client, Map groupData, AckRequest ackRequest) {
+    }
+
+    private void handleGroupCreated(SocketIOClient client, Map groupData, AckRequest ackRequest) {
         System.out.println("=== GROUP CREATED EVENT RECEIVED ===");
         System.out.println("Client session ID: " + client.getSessionId());
-        
+
         String userId = sessionToUserMapping.get(client.getSessionId());
         if (userId == null) {
             System.err.println("❌ User not authenticated for group_created event");
@@ -330,17 +334,17 @@ public class SocketIOService {
             if (memberIdsObj instanceof java.util.List) {
                 @SuppressWarnings("unchecked")
                 java.util.List<String> memberIds = (java.util.List<String>) memberIdsObj;
-                
+
                 System.out.println("Total members: " + memberIds.size());
                 System.out.println("Online users: " + userToSessionMapping.keySet());
-                
+
                 for (String memberId : memberIds) {
                     System.out.println("Processing member: " + memberId + ", Creator: " + userId);
-                    
+
                     // Gửi thông báo cho tất cả thành viên (bao gồm cả người tạo)
                     boolean isOnline = isUserOnline(memberId);
                     System.out.println("Member " + memberId + " is online: " + isOnline);
-                    
+
                     if (isOnline) {
                         sendMessageToUser(memberId, "group_created", groupData);
                         System.out.println("✓ Sent group_created notification to user: " + memberId);
@@ -385,7 +389,8 @@ public class SocketIOService {
     // Helper method để gửi tin nhắn đến phòng chat cụ thể
     public void sendMessageToRoom(String chatId, String eventName, Object data) {
         server.getRoomOperations(chatId).sendEvent(eventName, data);
-    }    // Helper method để gửi tin nhắn đến người dùng cụ thể
+    } // Helper method để gửi tin nhắn đến người dùng cụ thể
+
     public void sendMessageToUser(String userId, String eventName, Object data) {
         System.out.println("🔄 Attempting to send event '" + eventName + "' to user: " + userId);
         UUID sessionId = userToSessionMapping.get(userId);
@@ -402,7 +407,8 @@ public class SocketIOService {
             System.err.println("❌ No session found for user " + userId);
             System.err.println("Available sessions: " + userToSessionMapping);
         }
-    }    // Helper method để gửi tin nhắn đến tất cả người dùng
+    } // Helper method để gửi tin nhắn đến tất cả người dùng
+
     public void broadcastMessage(String eventName, Object data) {
         server.getBroadcastOperations().sendEvent(eventName, data);
     }
@@ -423,19 +429,19 @@ public class SocketIOService {
             System.out.println("=== USER LOGIN NOTIFICATION ===");
             System.out.println("User ID: " + userId);
             System.out.println("Email: " + email);
-            
+
             // Tạo dữ liệu thông báo đăng nhập
             Map<String, Object> loginData = new ConcurrentHashMap<>();
             loginData.put("userId", userId);
             loginData.put("email", email);
             loginData.put("timestamp", System.currentTimeMillis());
             loginData.put("status", "online");
-            
+
             // Broadcast thông báo đến tất cả các client đang kết nối
             server.getBroadcastOperations().sendEvent("user_login", loginData);
-            
+
             System.out.println("✓ Broadcasted user login notification for user: " + userId);
-            
+
         } catch (Exception e) {
             System.err.println("Error sending login notification: " + e.getMessage());
             e.printStackTrace();

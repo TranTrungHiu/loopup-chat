@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import "./styles/Home.css";
 import "./styles/AccountModal.css"; // Import CSS mới cho modal thông tin tài khoản
 import Toast, { showToast } from "../component/Toast";
@@ -70,6 +76,7 @@ import {
   fetchParticipantInfo,
   sendMessage,
   markMessageAsRead,
+  handleLogout as chatServiceLogout,
 } from "../services/chatService";
 import {
   connectSocket,
@@ -81,11 +88,15 @@ import {
   onMessageRead,
   onUserLogin,
   onUserStatusChange,
+  onTypingIndicator,
   emitMessageRead,
   emitUserStatus,
+  emitTypingStart,
+  emitTypingEnd,
 } from "../services/socketService";
 import ChatList from "../component/ChatList";
 import VideoCall from "../component/VideoCall";
+import TypingIndicator from "../component/TypingIndicator";
 Modal.setAppElement("#root");
 
 const Home = () => {
@@ -109,6 +120,62 @@ const Home = () => {
   const [newMessage, setNewMessage] = useState("");
   const [chats, setChats] = useState([]);
   const [participantsInfo, setParticipantsInfo] = useState({});
+  const [onlineUsers, setOnlineUsers] = useState(new Set()); // Track all online users globally
+
+  // Helper function to check if a user is online
+  const isUserOnline = useCallback(
+    (userId) => {
+      return onlineUsers.has(userId);
+    },
+    [onlineUsers]
+  );
+  // Memoized enhanced participant info that updates when onlineUsers or participantsInfo changes
+  const enhancedParticipantsInfo = useMemo(() => {
+    console.log("=== RECALCULATING ENHANCED PARTICIPANTS INFO ===");
+    console.log("participantsInfo keys:", Object.keys(participantsInfo));
+    console.log("participantsInfo:", participantsInfo);
+    console.log("onlineUsers size:", onlineUsers.size);
+    console.log("onlineUsers:", Array.from(onlineUsers));
+
+    const enhanced = { ...participantsInfo };
+
+    // Update online status for all participants based on current onlineUsers
+    Object.keys(enhanced).forEach((chatId) => {
+      if (enhanced[chatId] && enhanced[chatId].uid) {
+        const wasOnline = enhanced[chatId].isOnline;
+        const isOnlineNow = isUserOnline(enhanced[chatId].uid);
+
+        console.log(`Checking user ${enhanced[chatId].uid} in chat ${chatId}:`);
+        console.log(`  - Was online: ${wasOnline}`);
+        console.log(`  - Is online now: ${isOnlineNow}`);
+        console.log(
+          `  - onlineUsers has this user: ${onlineUsers.has(
+            enhanced[chatId].uid
+          )}`
+        );
+
+        enhanced[chatId] = {
+          ...enhanced[chatId],
+          isOnline: isOnlineNow,
+        };
+
+        if (wasOnline !== isOnlineNow) {
+          console.log(
+            `✓ Status changed for ${enhanced[chatId].uid} in chat ${chatId}: ${wasOnline} -> ${isOnlineNow}`
+          );
+        } else {
+          console.log(
+            `- No status change for ${enhanced[chatId].uid} in chat ${chatId}: still ${isOnlineNow}`
+          );
+        }
+      }
+    });
+
+    console.log("Final enhanced participants info:", enhanced);
+    console.log("=== END ENHANCED PARTICIPANTS INFO CALCULATION ===");
+
+    return enhanced;
+  }, [participantsInfo, onlineUsers, isUserOnline]);
   const [currentChat, setCurrentChat] = useState(null);
   const [currentParticipant, setCurrentParticipant] = useState(null);
   const [isLoadingChats, setIsLoadingChats] = useState(false);
@@ -117,6 +184,12 @@ const Home = () => {
   const [messageError, setMessageError] = useState(null);
   const [showFriendSidebar, setShowFriendSidebar] = useState(false);
   const [isFindFriendModalOpen, setIsFindFriendModalOpen] = useState(false);
+
+  // Typing indicator states
+  const [typingUsers, setTypingUsers] = useState([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef(null);
+
   const navigate = useNavigate();
 
   // xử lý emoji
@@ -433,11 +506,9 @@ const Home = () => {
       loadChats();
     }
   }, [tabs, loadChats]);
-
   const handleLogout = async () => {
-    await signOut(auth);
-    localStorage.clear();
-    navigate("/");
+    // Use the logout function from chatService which properly emits offline status
+    await chatServiceLogout(navigate);
   };
 
   const fetchFriends = async () => {
@@ -629,13 +700,17 @@ const Home = () => {
       setIsLoadingMessages(false);
     }
   };
-
+  // Tham chiếu để theo dõi việc cuộn xuống cuối cùng
   // Xử lý gửi tin nhắn dựa hoàn toàn vào Socket.IO real-time
   const handleSendMessage = async () => {
     try {
       if (!currentChat || !newMessage.trim()) return;
 
       const trimmedMessage = newMessage.trim();
+
+      // Stop typing when sending message
+      handleTypingEnd();
+
       setNewMessage(""); // Xóa tin nhắn trong input ngay lập tức
 
       // Đặt shouldScrollToBottomRef thành true để đảm bảo cuộn xuống dưới khi tin nhắn mới đến
@@ -652,6 +727,67 @@ const Home = () => {
       showToast("error", "Không thể gửi tin nhắn, vui lòng thử lại");
     }
   };
+
+  // Typing indicator functions
+  const handleTypingStart = useCallback(() => {
+    if (!currentChat || isTyping) return;
+
+    setIsTyping(true);
+    emitTypingStart(currentChat.chatId);
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set timeout to stop typing after 3 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      handleTypingEnd();
+    }, 3000);
+  }, [currentChat, isTyping]);
+
+  const handleTypingEnd = useCallback(() => {
+    if (!currentChat || !isTyping) return;
+
+    setIsTyping(false);
+    emitTypingEnd(currentChat.chatId);
+
+    // Clear timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+  }, [currentChat, isTyping]); // Handle message input change with typing indicators
+  const handleMessageInputChange = useCallback(
+    (e) => {
+      const value = e.target.value;
+      const prevValue = newMessage;
+      setNewMessage(value);
+
+      // Only trigger typing if user is actually typing (content changed)
+      if (value !== prevValue) {
+        if (value.trim().length > 0) {
+          handleTypingStart();
+        } else {
+          handleTypingEnd();
+        }
+      }
+    },
+    [handleTypingStart, handleTypingEnd, newMessage]
+  );
+
+  // Handle key press events for typing indicator
+  const handleKeyPress = useCallback(
+    (e) => {
+      // Only trigger typing on actual character input, not special keys
+      if (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") {
+        if (newMessage.trim().length > 0 || e.key.length === 1) {
+          handleTypingStart();
+        }
+      }
+    },
+    [handleTypingStart, newMessage]
+  );
 
   const handleChatSelect = useCallback(
     async (chat) => {
@@ -1123,7 +1259,6 @@ const Home = () => {
       audio.currentTime = 0;
     }
   };
-
   // Kết nối Socket.IO khi component được mount
   useEffect(() => {
     if (!uid) return;
@@ -1131,10 +1266,8 @@ const Home = () => {
     // Kết nối với socket server
     const socket = connectSocket(uid);
 
-    // Emit user status as online when connected
-    setTimeout(() => {
-      emitUserStatus(uid, 'online');
-    }, 1000);
+    // Note: User status should only be updated on explicit login/logout
+    // We don't emit online status here anymore to avoid status changes during normal socket reconnections
 
     // Đăng ký các sự kiện socket
     const newMessageUnsub = onNewMessage((message) => {
@@ -1198,7 +1331,7 @@ const Home = () => {
     const chatUpdatedUnsub = onChatUpdated((data) => {
       console.log("Chat updated:", data);
       loadChats();
-    });    // Xử lý sự kiện tin nhắn đã đọc
+    }); // Xử lý sự kiện tin nhắn đã đọc
     const messageReadUnsub = onMessageRead((data) => {
       console.log("Message read event received:", data);
 
@@ -1232,10 +1365,10 @@ const Home = () => {
           return msg;
         })
       );
-    });    // Xử lý sự kiện đăng nhập người dùng
+    }); // Xử lý sự kiện đăng nhập người dùng
     const userLoginUnsub = onUserLogin((data) => {
       console.log("User login notification received:", data);
-      
+
       // Kiểm tra dữ liệu hợp lệ
       if (!data || !data.userId || !data.email) {
         console.error("Invalid user login event data:", data);
@@ -1245,66 +1378,196 @@ const Home = () => {
       // Cập nhật trạng thái online cho người dùng trong participantsInfo
       setParticipantsInfo((prev) => {
         const updated = { ...prev };
-        Object.keys(updated).forEach(chatId => {
+        Object.keys(updated).forEach((chatId) => {
           if (updated[chatId] && updated[chatId].uid === data.userId) {
             updated[chatId] = {
               ...updated[chatId],
               isOnline: true,
-              status: 'online'
+              status: "online",
             };
           }
         });
         return updated;
       });
-    });    // Xử lý sự kiện thay đổi trạng thái người dùng (online/offline)
+    }); // Xử lý sự kiện thay đổi trạng thái người dùng (online/offline)
     const userStatusUnsub = onUserStatusChange((data) => {
-      console.log("User status change notification received:", data);
-      
+      console.log("=== USER STATUS CHANGE EVENT RECEIVED ===");
+      console.log("Event data:", data);
+      console.log(
+        "Current participantsInfo keys:",
+        Object.keys(participantsInfo)
+      );
+      console.log("Current onlineUsers size:", onlineUsers.size);
+      console.log("Current onlineUsers array:", Array.from(onlineUsers));
+
       // Kiểm tra dữ liệu hợp lệ
       if (!data || !data.userId || !data.status) {
         console.error("Invalid user status change event data:", data);
         return;
       }
 
-      // Cập nhật trạng thái trong participantsInfo
+      console.log(
+        `Processing: User ${data.userId} status changed to: ${data.status}`
+      );
+
+      // Cập nhật danh sách người dùng online toàn cục
+      setOnlineUsers((prev) => {
+        const newOnlineUsers = new Set(prev);
+        if (data.status === "online") {
+          newOnlineUsers.add(data.userId);
+          console.log(
+            `✓ Added user ${data.userId} to online users. New size: ${newOnlineUsers.size}`
+          );
+        } else {
+          newOnlineUsers.delete(data.userId);
+          console.log(
+            `✓ Removed user ${data.userId} from online users. New size: ${newOnlineUsers.size}`
+          );
+        }
+        console.log("Updated onlineUsers:", Array.from(newOnlineUsers));
+        return newOnlineUsers;
+      }); // Cập nhật trạng thái trong participantsInfo (cho những user đã có cuộc trò chuyện)
       setParticipantsInfo((prev) => {
         const updated = { ...prev };
-        Object.keys(updated).forEach(chatId => {
+        let foundUpdate = false;
+
+        console.log("Searching for user in participantsInfo...");
+        Object.keys(updated).forEach((chatId) => {
           if (updated[chatId] && updated[chatId].uid === data.userId) {
+            console.log(
+              `✓ Found and updating user ${data.userId} in chat ${chatId}: ${data.status}`
+            );
             updated[chatId] = {
               ...updated[chatId],
-              isOnline: data.status === 'online',
+              isOnline: data.status === "online",
               status: data.status,
-              lastSeen: data.status === 'offline' ? new Date().toISOString() : updated[chatId].lastSeen
+              lastSeen:
+                data.status === "offline"
+                  ? new Date().toISOString()
+                  : updated[chatId].lastSeen,
             };
+            foundUpdate = true;
           }
         });
-        return updated;
-      });
 
-      // Cập nhật currentParticipant nếu đang xem chat với người này
+        if (foundUpdate) {
+          console.log("✓ Updated participantsInfo for user:", data.userId);
+        } else {
+          console.log("⚠ User not found in participantsInfo:", data.userId);
+          // If user not found in participantsInfo, but they have a chat with current user,
+          // we need to fetch their participant info and update it
+          if (data.status === "online") {
+            // Find if this user has any chat with current user
+            const userChats = chats.filter((chat) => {
+              const otherParticipants = chat.participants.filter(
+                (p) => p !== uid
+              );
+              return otherParticipants.includes(data.userId);
+            });
+
+            if (userChats.length > 0) {
+              console.log(
+                `User ${data.userId} has ${userChats.length} chats but not in participantsInfo. Fetching info...`
+              );
+              // Fetch participant info for this user in their chats
+              userChats.forEach(async (chat) => {
+                try {
+                  const participantInfo = await fetchParticipantInfo(
+                    chat.chatId,
+                    uid,
+                    token
+                  );
+                  if (participantInfo && participantInfo.uid === data.userId) {
+                    console.log(
+                      `✓ Fetched and updating participant info for ${data.userId} in chat ${chat.chatId}`
+                    );
+                    setParticipantsInfo((prevInfo) => ({
+                      ...prevInfo,
+                      [chat.chatId]: {
+                        ...participantInfo,
+                        isOnline: true,
+                        status: "online",
+                      },
+                    }));
+                  }
+                } catch (error) {
+                  console.error(
+                    `Error fetching participant info for ${data.userId}:`,
+                    error
+                  );
+                }
+              });
+            }
+          }
+        }
+
+        return updated;
+      }); // Cập nhật currentParticipant nếu đang xem chat với người này
       if (currentParticipant && currentParticipant.uid === data.userId) {
-        setCurrentParticipant(prev => ({
+        console.log(
+          `Updating current participant status: ${data.userId} -> ${data.status}`
+        );
+        setCurrentParticipant((prev) => ({
           ...prev,
-          isOnline: data.status === 'online',
+          isOnline: data.status === "online",
           status: data.status,
-          lastSeen: data.status === 'offline' ? new Date().toISOString() : prev.lastSeen
+          lastSeen:
+            data.status === "offline"
+              ? new Date().toISOString()
+              : prev.lastSeen,
         }));
       }
-    });    // Cleanup khi component bị hủy
+
+      console.log("✓ User status change processing completed");
+    });
+
+    // Xử lý sự kiện typing indicator
+    const typingIndicatorUnsub = onTypingIndicator((data) => {
+      console.log("Typing indicator received:", data);
+
+      // Kiểm tra dữ liệu hợp lệ và chỉ xử lý nếu đang trong chat hiện tại
+      if (
+        !data ||
+        !data.userId ||
+        !data.chatId ||
+        !currentChat ||
+        data.chatId !== currentChat.chatId
+      ) {
+        return;
+      }
+
+      // Không xử lý typing indicator từ chính user hiện tại
+      if (data.userId === uid) {
+        return;
+      }
+
+      setTypingUsers((prev) => {
+        if (data.isTyping) {
+          // Thêm user vào danh sách đang typing (nếu chưa có)
+          if (!prev.includes(data.userId)) {
+            return [...prev, data.userId];
+          }
+          return prev;
+        } else {
+          // Xóa user khỏi danh sách đang typing
+          return prev.filter((userId) => userId !== data.userId);
+        }
+      });
+    }); // Cleanup khi component bị hủy
     return () => {
       newMessageUnsub();
       chatUpdatedUnsub();
       messageReadUnsub();
       userLoginUnsub();
       userStatusUnsub();
-      
-      // Emit user status as offline when disconnecting
-      emitUserStatus(uid, 'offline');
-      
+      typingIndicatorUnsub();
+
+      // Note: We don't emit offline status here anymore
+      // User status should only change on explicit logout via chatService
+
       disconnectSocket();
     };
-  }, [uid, currentChat]);
+  }, [uid, currentChat, chats, token]);
 
   // Đánh dấu tin nhắn đã đọc khi người dùng vào hội thoại
   useEffect(() => {
@@ -1359,7 +1622,6 @@ const Home = () => {
       }
     }
   }, []);
-
   // Đánh dấu cần cuộn khi tin nhắn thay đổi
   useEffect(() => {
     if (shouldScrollToBottomRef.current && messages.length > 0) {
@@ -1367,6 +1629,22 @@ const Home = () => {
       shouldScrollToBottomRef.current = false;
     }
   }, [messages, scrollToBottom]);
+
+  // Debug: Track onlineUsers changes
+  useEffect(() => {
+    console.log("=== ONLINE USERS STATE CHANGED ===");
+    console.log("New onlineUsers:", Array.from(onlineUsers));
+    console.log("Size:", onlineUsers.size);
+    console.log("=== END ONLINE USERS STATE CHANGE ===");
+  }, [onlineUsers]);
+
+  // Debug: Track participantsInfo changes
+  useEffect(() => {
+    console.log("=== PARTICIPANTS INFO STATE CHANGED ===");
+    console.log("New participantsInfo:", participantsInfo);
+    console.log("Keys:", Object.keys(participantsInfo));
+    console.log("=== END PARTICIPANTS INFO STATE CHANGE ===");
+  }, [participantsInfo]);
 
   // Đánh dấu tất cả tin nhắn chưa đọc là đã đọc khi người dùng nhấn vào ô nhập tin nhắn
   const handleInputFocus = useCallback(() => {
@@ -1443,36 +1721,57 @@ const Home = () => {
   const handleLeaveCurrentChat = () => {
     setCurrentChat(null);
     setTabs("");
-  };
-
-  // Handle page visibility change to update user status
+  }; // Set user as online when component mounts (only once per browser session)
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!uid) return;
-      
-      if (document.hidden) {
-        // User switched tabs or minimized window - mark as offline
-        emitUserStatus(uid, 'offline');
-      } else {
-        // User came back - mark as online
-        emitUserStatus(uid, 'online');
-      }
-    };
+    if (!uid) return;
 
-    const handleBeforeUnload = () => {
-      if (uid) {
-        emitUserStatus(uid, 'offline');
-      }
-    };
+    // Check if we've already emitted online status for this session
+    const sessionKey = `online_status_emitted_${uid}`;
+    const hasEmittedStatus = sessionStorage.getItem(sessionKey);
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    // Add current user to online users immediately (optimistic update)
+    setOnlineUsers((prev) => {
+      const newOnlineUsers = new Set(prev);
+      newOnlineUsers.add(uid);
+      return newOnlineUsers;
+    });
 
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [uid]);
+    // Only emit online status if we haven't done so in this browser session
+    if (!hasEmittedStatus) {
+      // Add a small delay to ensure all socket event listeners are registered first
+      const statusTimeout = setTimeout(() => {
+        console.log(
+          "Emitting online status for user (first time this session):",
+          uid
+        );
+        emitUserStatus(uid, "online");
+        // Mark that we've emitted status for this session
+        sessionStorage.setItem(sessionKey, "true");
+      }, 500); // 500ms delay to ensure socket is fully connected
+
+      return () => {
+        clearTimeout(statusTimeout);
+      };
+    } else {
+      console.log(
+        "User status already emitted for this session, skipping:",
+        uid
+      );
+    }
+
+    // Note: We removed automatic offline status on visibility change and beforeunload
+    // User will only go offline when they explicitly logout or close the browser completely
+  }, [uid]); // Only run when uid changes (i.e., on login)
+
+  // Clear typing users when switching chats
+  useEffect(() => {
+    setTypingUsers([]);
+    setIsTyping(false);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+  }, [currentChat]);
 
   return (
     <div className="chat-container">
@@ -1598,13 +1897,13 @@ const Home = () => {
               >
                 <FaUsers size={18} />
               </button>
-            </div>
+            </div>{" "}
             <ChatList
               chats={chats}
               isLoading={isLoadingChats}
               error={chatError}
               currentChat={currentChat}
-              participantsInfo={participantsInfo}
+              participantsInfo={enhancedParticipantsInfo}
               onChatSelect={handleChatSelect}
               onRetry={loadChats}
               onFindFriend={() => setIsUserModalOpen(true)}
@@ -1671,6 +1970,15 @@ const Home = () => {
                 )}
               </div>
 
+              {/* Typing Indicator */}
+              {typingUsers.length > 0 && (
+                <TypingIndicator
+                  typingUsers={typingUsers}
+                  participantsInfo={participantsInfo}
+                  currentChat={currentChat}
+                />
+              )}
+
               <div className="chat-input-area">
                 <div className="chat-input-container">
                   <button
@@ -1679,20 +1987,22 @@ const Home = () => {
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   >
                     <FaSmile />
-                  </button>
-
+                  </button>{" "}
                   <input
                     ref={messageInputRef}
                     type="text"
                     placeholder="Tin nhắn..."
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={handleMessageInputChange}
                     onFocus={handleInputFocus}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") handleSendMessage();
+                      handleKeyPress(e);
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
                     }}
                   />
-
                   <div className="input-actions">
                     {/* File Upload */}
                     <label

@@ -9,6 +9,7 @@ let chatUpdateCallbacks = [];
 let messageReadCallbacks = [];
 let userLoginCallbacks = [];
 let userStatusCallbacks = [];
+let groupNotificationCallbacks = [];
 let connectionAttempts = 0;
 const MAX_RECONNECTION_ATTEMPTS = 5;
 
@@ -68,17 +69,33 @@ export const connectSocket = (userId) => {
       forceNew: true, // Luôn tạo kết nối mới để tránh lỗi
       autoConnect: true,
       query: { userId: userId } // Gửi userId qua query string
-    });
-
-    // Connection events
+    });    // Connection events
     socket.on('connect', () => {
       console.log('Socket.IO kết nối thành công với id:', socket.id);
       connectionAttempts = 0;
       currentPortIndex = 0;
       
-      // Đăng ký người dùng và tham gia phòng
-      socket.emit('register_user', userId);
-      socket.emit('join_room', `user_${userId}`);
+      // Authenticate with the backend first
+      const token = localStorage.getItem('idToken');
+      if (token) {
+        console.log('Sending authentication to backend...');
+        socket.emit('authenticate', { token: token });
+      } else {
+        console.error('No authentication token found in localStorage');
+      }
+    });    // Listen for authentication response
+    socket.on('authenticated', (response) => {
+      console.log('Authentication response received:', response);
+      if (response.success) {
+        console.log('✅ Socket authentication successful for user:', response.userId);
+        console.log('🔗 Socket is now ready to receive group_created events');
+        
+        // After successful authentication, the backend will automatically join the user to their room
+        // No need to emit additional events here
+        console.log('User authenticated and ready to receive events');
+      } else {
+        console.error('❌ Socket authentication failed:', response.error);
+      }
     });
 
     socket.on('connect_error', (error) => {
@@ -176,18 +193,79 @@ export const connectSocket = (userId) => {
     socket.on('user_login_notification', (data) => {
       console.log('Thông báo người dùng đăng nhập:', data);
       userLoginCallbacks.forEach(callback => callback(data));
+    });    // Listen for user status changes (online/offline)
+    socket.on('user_status_changed', (data) => {
+      console.log('=== USER STATUS CHANGED EVENT RECEIVED ===');
+      console.log('Event data:', data);
+      console.log('Number of registered callbacks:', userStatusCallbacks.length);
+      userStatusCallbacks.forEach((callback, index) => {
+        console.log(`Calling callback ${index + 1}/${userStatusCallbacks.length}`);
+        callback(data);
+      });
+      console.log('✓ All user status callbacks processed');
     });
 
-    // Listen for user status changes (online/offline)
-    socket.on('user_status_changed', (data) => {
-      console.log('Thay đổi trạng thái người dùng:', data);
-      userStatusCallbacks.forEach(callback => callback(data));
+    // Listen for online users list (sent when user connects)
+    socket.on('online_users', (onlineUsersList) => {
+      console.log('=== ONLINE USERS LIST RECEIVED ===');
+      console.log('Online users:', onlineUsersList);
+      console.log('Number of online users:', onlineUsersList.length || onlineUsersList.size || 0);
+      
+      // Create a status change event for each online user
+      if (Array.isArray(onlineUsersList)) {
+        onlineUsersList.forEach(userId => {
+          console.log(`Processing online user: ${userId}`);
+          userStatusCallbacks.forEach(callback => {
+            callback({
+              userId: userId,
+              status: 'online',
+              timestamp: Date.now(),
+              source: 'initial_load'
+            });
+          });
+        });
+      }
+      console.log('✓ All online users processed');
     });
 
     // Listen for general user login events
     socket.on('user_login', (data) => {
       console.log('Sự kiện đăng nhập người dùng:', data);
       userLoginCallbacks.forEach(callback => callback(data));
+    });    // Listen for group_created events
+    socket.on('group_created', (data) => {
+      console.log('=== GROUP CREATED EVENT RECEIVED ===');
+      console.log('Event data:', data);
+      console.log('Current user from query:', userId);
+      console.log('Number of registered group notification callbacks:', groupNotificationCallbacks.length);
+      console.log('Number of registered chat update callbacks:', chatUpdateCallbacks.length);
+      
+      // Trigger group notification callbacks first (for notifications)
+      groupNotificationCallbacks.forEach((callback, index) => {
+        console.log(`Calling group notification callback ${index + 1}/${groupNotificationCallbacks.length}`);
+        try {
+          callback(data);
+        } catch (error) {
+          console.error(`Error in group notification callback ${index + 1}:`, error);
+        }
+      });
+      
+      // Then trigger chat update callbacks to refresh the chat list
+      chatUpdateCallbacks.forEach((callback, index) => {
+        console.log(`Calling chat update callback ${index + 1}/${chatUpdateCallbacks.length}`);
+        try {
+          callback(data);
+        } catch (error) {
+          console.error(`Error in chat update callback ${index + 1}:`, error);
+        }
+      });
+      console.log('✓ All group created callbacks processed');
+    });
+
+    // Listen for typing indicators
+    socket.on('typing_indicator', (data) => {
+      console.log('Typing indicator received:', data);
+      typingIndicatorCallbacks.forEach(callback => callback(data));
     });
 
     return socket;
@@ -207,7 +285,7 @@ export const disconnectSocket = () => {
 export const joinChatRoom = (chatId) => {
   if (socket && socket.connected) {
     console.log(`Tham gia phòng chat: ${chatId}`);
-    socket.emit('join_room', chatId);
+    socket.emit('join_chat', chatId);
   } else {
     console.warn('Socket chưa kết nối, không thể tham gia phòng');
   }
@@ -216,7 +294,7 @@ export const joinChatRoom = (chatId) => {
 export const leaveChatRoom = (chatId) => {
   if (socket && socket.connected) {
     console.log(`Rời phòng chat: ${chatId}`);
-    socket.emit('leave_room', chatId);
+    socket.emit('leave_chat', chatId);
   } else {
     console.warn('Socket chưa kết nối, không thể rời phòng');
   }
@@ -257,6 +335,18 @@ export const onUserStatusChange = (callback) => {
   };
 };
 
+export const onGroupNotification = (callback) => {
+  console.log('SocketService: Registering group notification callback');
+  console.log('Current number of group notification callbacks:', groupNotificationCallbacks.length);
+  groupNotificationCallbacks.push(callback);
+  console.log('New number of group notification callbacks:', groupNotificationCallbacks.length);
+  return () => {
+    console.log('SocketService: Unregistering group notification callback');
+    groupNotificationCallbacks = groupNotificationCallbacks.filter(cb => cb !== callback);
+    console.log('Number of group notification callbacks after removal:', groupNotificationCallbacks.length);
+  };
+};
+
 // Add direct function to emit message read events
 export const emitMessageRead = (messageId, userId, chatId) => {
   if (socket && socket.connected) {
@@ -286,14 +376,59 @@ export const reconnectSocket = (userId) => {
 
 // Emit user status to server
 export const emitUserStatus = (userId, status) => {
+  console.log('=== EMITTING USER STATUS ===');
+  console.log('Socket connected:', socket && socket.connected);
+  console.log('User ID:', userId);
+  console.log('Status:', status);
+  
   if (socket && socket.connected) {
-    console.log(`Emitting user status: ${userId} - ${status}`);
-    socket.emit('user_status', {
+    const statusData = {
       userId: userId,
       status: status,
       timestamp: new Date().toISOString()
+    };
+    console.log('Sending status data:', statusData);
+    socket.emit('user_status', statusData);
+    console.log('✓ User status emitted successfully');
+  } else {
+    console.warn('✗ Socket not connected, cannot emit user status');
+    console.log('Socket state:', socket ? 'exists but not connected' : 'socket is null');
+  }
+};
+
+// Emit typing start to server
+export const emitTypingStart = (chatId) => {
+  if (socket && socket.connected) {
+    console.log(`Emitting typing start for chat: ${chatId}`);
+    socket.emit('typing_start', {
+      chatId: chatId,
+      timestamp: new Date().toISOString()
     });
   } else {
-    console.warn('Socket not connected, cannot emit user status');
+    console.warn('Socket not connected, cannot emit typing start');
   }
+};
+
+// Emit typing end to server
+export const emitTypingEnd = (chatId) => {
+  if (socket && socket.connected) {
+    console.log(`Emitting typing end for chat: ${chatId}`);
+    socket.emit('typing_end', {
+      chatId: chatId,
+      timestamp: new Date().toISOString()
+    });
+  } else {
+    console.warn('Socket not connected, cannot emit typing end');
+  }
+};
+
+// Callback arrays for typing indicators
+let typingIndicatorCallbacks = [];
+
+// Listen for typing indicators
+export const onTypingIndicator = (callback) => {
+  typingIndicatorCallbacks.push(callback);
+  return () => {
+    typingIndicatorCallbacks = typingIndicatorCallbacks.filter(cb => cb !== callback);
+  };
 };

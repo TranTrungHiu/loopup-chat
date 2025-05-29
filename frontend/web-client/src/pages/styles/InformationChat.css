@@ -173,7 +173,6 @@
     align-items: center;
     gap: 6px;
     background-color: rgba(255, 255, 255, 0.2);
-    padding: 5px 10px;
     border-radius: 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     transition: all 0.2s ease;
@@ -184,8 +183,8 @@
 }
 
 .status-dot {
-    width: 8px;
-    height: 8px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     display: inline-block;
 }
