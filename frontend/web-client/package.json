@@ -27,7 +27,7 @@
     "socket.io-client": "^2.5.0"
   },
   "scripts": {
-    "start": "concurrently \"npm run start-react\" \"node src/services/callService.js\"",
+    "start": "concurrently \"npm run start-react\"",
     "start-react": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",

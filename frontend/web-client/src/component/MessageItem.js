@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, forwardRef } from "react";
 import { 
   FaCheckCircle, 
   FaCheck, 
@@ -20,59 +20,6 @@ import {
   FaReply, FaShare, FaEllipsisV, FaCopy, FaUndo, FaEdit
 } from "react-icons/fa";
 import "../pages/styles/MessageItem.css";
-
-// Modal chọn bạn bè để chuyển tiếp
-const ForwardModal = ({ friends, onClose, onForward }) => {
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState(null);
-
-  const filtered = friends.filter(f =>
-    `${f.firstName} ${f.lastName}`.toLowerCase().includes(search.toLowerCase())
-  );
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <h3>Chọn bạn để chuyển tiếp</h3>
-        <input
-          type="text"
-          placeholder="Tìm kiếm bạn bè..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ width: "100%", marginBottom: 8 }}
-        />
-        <div style={{ maxHeight: 200, overflowY: "auto" }}>
-          {filtered.map(f => (
-            <div
-              key={f.id}
-              className={`friend-item${selected === f.id ? " selected" : ""}`}
-              onClick={() => setSelected(f.id)}
-              style={{
-                padding: 8,
-                cursor: "pointer",
-                background: selected === f.id ? "#e6f7ff" : undefined
-              }}
-            >
-              {f.firstName} {f.lastName}
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: 12, textAlign: "right" }}>
-          <button onClick={onClose} style={{ marginRight: 8 }}>Hủy</button>
-          <button
-            disabled={!selected}
-            onClick={() => {
-              const friend = friends.find(f => f.id === selected);
-              if (friend) onForward(friend);
-            }}
-          >
-            Chuyển tiếp
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // Xử lý hiển thị icon cho các loại file khác nhau
 const getFileIcon = (fileName) => {
@@ -224,7 +171,8 @@ const MediaViewerModal = ({ media, onClose }) => {
   );
 };
 
-const MessageItem = ({ 
+// Sử dụng forwardRef để hỗ trợ scroll-to-reply
+const MessageItem = forwardRef(({
   message, 
   isCurrentUser, 
   showAvatar = true, 
@@ -234,29 +182,29 @@ const MessageItem = ({
   friendsList = [],
   uid,
   onReply,
+  onForward, // <-- prop để mở modal chuyển tiếp ở Home.jsx
   onForwardSuccess,
   getReplyContent,
   getReplyAuthorName,
   onStartEdit
-}) => {
+}, ref) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [viewingMedia, setViewingMedia] = useState(null);
   const [hovered, setHovered] = useState(false);
   const [showMore, setShowMore] = useState(false);
-  const [showForward, setShowForward] = useState(false);
-
-  useEffect(() => {
-    if (!message || !message.message) {
-      console.log('Debugging message structure:', message);
-    }
-  }, [message]);
 
   // Hover actions
   const handleReply = () => {
     if (typeof onReply === "function") onReply(message);
   };
-  const handleForward = () => setShowForward(true);
+  // Gọi prop onForward để Home.jsx mở modal chuyển tiếp
+  const handleForward = () => {
+  // Đảm bảo truyền mảng!
+  if (typeof onForward === "function") {
+    onForward([message]);
+  }
+};
   const handleCopy = () => {
     if (typeof message.message === "string" && message.message.trim()) {
       navigator.clipboard.writeText(message.message);
@@ -307,12 +255,10 @@ const MessageItem = ({
         date = new Date();
       }
       if (isNaN(date.getTime())) {
-        console.warn('Invalid date format:', timestamp);
         return 'Just now';
       }
       return date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     } catch (error) {
-      console.error('Error formatting timestamp:', error, timestamp);
       return 'Just now';
     }
   };
@@ -437,7 +383,6 @@ const MessageItem = ({
       }
     }
     if (!textContent && typeof message === 'object') {
-      console.debug('Debug message structure:', Object.keys(message));
       const messageFields = Object.entries(message)
         .filter(([key]) => key !== 'readBy')
         .map(([key, value]) => {
@@ -546,6 +491,7 @@ const MessageItem = ({
   return (
     <>
       <div 
+        ref={ref}
         className={`message-item ${isCurrentUser ? 'user' : 'other'}`}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => { setHovered(false); setShowMore(false); }}
@@ -620,7 +566,7 @@ const MessageItem = ({
                           <button className="more-action-btn" onClick={() => handleDownload(message.mediaUrl, message.fileName)}><FaDownload /> Tải về máy</button>
                         )}
                         {isCurrentUser && (
-                          <button className="more-action-btn" onClick={handleRecall}><FaUndo /> Thu hồi</button>
+                          <button className="more-action-btn btn-danger" onClick={handleRecall}><FaUndo /> Thu hồi</button>
                         )}
                         {isCurrentUser && typeof message.message === "string" && (
                           <button
@@ -648,31 +594,8 @@ const MessageItem = ({
           onClose={() => setViewingMedia(null)}
         />
       )}
-      {/* Modal chuyển tiếp */}
-      {showForward && (
-        <ForwardModal
-          friends={friendsList}
-          onClose={() => setShowForward(false)}
-          onForward={async (friend) => {
-            await fetch("http://localhost:8080/api/messages/forward", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("idToken")}`,
-              },
-              body: JSON.stringify({
-                toUserId: friend.id,
-                messageId: message.id,
-                fromUserId: uid || message.sender,
-              }),
-            });
-            setShowForward(false);
-            if (typeof onForwardSuccess === "function") onForwardSuccess(friend);
-          }}
-        />
-      )}
     </>
   );
-};
+});
 
 export default MessageItem;

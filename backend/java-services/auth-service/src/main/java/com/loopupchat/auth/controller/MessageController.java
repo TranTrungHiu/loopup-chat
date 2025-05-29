@@ -606,10 +606,10 @@ public class MessageController {
         }
     }
 
-    // Chuyển tiếp tin nhắn
     @PostMapping("/forward")
     public ResponseEntity<?> forwardMessage(@RequestBody Map<String, Object> body) {
         String toUserId = (String) body.get("toUserId");
+        String toGroupId = (String) body.get("toGroupId");
         String messageId = (String) body.get("messageId");
         String fromUserId = (String) body.get("fromUserId");
         Firestore firestore = FirestoreClient.getFirestore();
@@ -623,11 +623,62 @@ public class MessageController {
             Map<String, Object> msgData = new HashMap<>(snapshot.getData());
             msgData.put("id", UUID.randomUUID().toString());
             msgData.put("sender", fromUserId);
-            msgData.put("forwardedTo", toUserId);
-            msgData.put("timestamp", new Date());
-            msgData.put("readBy", Map.of(fromUserId, true));
-            firestore.collection("messages").add(msgData);
-            return ResponseEntity.ok(msgData);
+            msgData.put("forwardedFrom", messageId);
+
+            // Đặt thời gian mới nhất cho tin nhắn chuyển tiếp
+            Date now = new Date();
+            msgData.put("createdAt", now.getTime());
+            msgData.put("timestamp", now);
+
+            String targetChatId = null;
+
+            // Nếu chuyển tiếp vào nhóm thì set chatId là groupId mới
+            if (toGroupId != null && !toGroupId.isEmpty()) {
+                msgData.put("chatId", toGroupId);
+                targetChatId = toGroupId;
+            }
+            // Nếu chuyển tiếp cho user thì tạo chatId mới hoặc lấy chatId cũ (tuỳ logic)
+            else if (toUserId != null && !toUserId.isEmpty()) {
+                String chatId1 = fromUserId + "_" + toUserId;
+                String chatId2 = toUserId + "_" + fromUserId;
+
+                DocumentReference chatRef1 = firestore.collection("chats").document(chatId1);
+                DocumentReference chatRef2 = firestore.collection("chats").document(chatId2);
+
+                DocumentSnapshot chatSnap1 = chatRef1.get().get();
+                DocumentSnapshot chatSnap2 = chatRef2.get().get();
+
+                if (chatSnap1.exists()) {
+                    targetChatId = chatId1;
+                } else if (chatSnap2.exists()) {
+                    targetChatId = chatId2;
+                } else {
+                    List<String> ids = Arrays.asList(fromUserId, toUserId);
+                    Collections.sort(ids);
+                    targetChatId = ids.get(0) + "_" + ids.get(1);
+
+                    Map<String, Object> chatData = new HashMap<>();
+                    chatData.put("chatId", targetChatId);
+                    chatData.put("participants", ids);
+                    chatData.put("isGroupChat", false);
+                    chatData.put("createdAt", now.getTime());
+                    firestore.collection("chats").document(targetChatId).set(chatData);
+                }
+                msgData.put("chatId", targetChatId);
+            }
+
+            // Lưu tin nhắn mới
+            firestore.collection("messages").document((String) msgData.get("id")).set(msgData);
+
+            // Gửi socket event cho phòng chat mới
+            if (targetChatId == null) {
+                targetChatId = (String) msgData.get("chatId");
+            }
+            if (targetChatId != null) {
+                socketIOServer.getRoomOperations(targetChatId).sendEvent("new_message", msgData);
+            }
+
+            return ResponseEntity.ok(Map.of("success", true));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }

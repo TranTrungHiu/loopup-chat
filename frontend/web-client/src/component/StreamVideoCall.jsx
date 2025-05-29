@@ -1,75 +1,40 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React from "react";
 import {
+  StreamVideo,
   StreamVideoClient,
   StreamCall,
-  StreamCallProvider,
-  StreamVideo,
-  CallParticipantsList,
+  StreamTheme,
+  CallControls,
+  CallingState,
 } from "@stream-io/video-react-sdk";
 
-const StreamVideoCall = ({ apiKey, userId, userName, token, callId, onLeave }) => {
-  const [call, setCall] = useState(null);
+const StreamVideoCall = ({ apiKey, userId, userName, callId, token, onLeave }) => {
+  const client = React.useMemo(
+    () =>
+      new StreamVideoClient({
+        apiKey,
+        user: { id: userId, name: userName },
+        token,
+      }),
+    [apiKey, userId, userName, token]
+  );
 
-  // Khởi tạo client chỉ với apiKey
-  const client = useMemo(() => new StreamVideoClient({ apiKey }), [apiKey]);
+  const call = React.useMemo(() => client.call("default", callId), [client, callId]);
 
-  // Kết nối user khi token thay đổi
-  useEffect(() => {
-    let isMounted = true;
-    const connect = async () => {
-      if (client && userId && token) {
-        await client.connectUser({ id: userId, name: userName }, token);
-        if (!isMounted) return;
-        const callInstance = client.call("default", callId);
-        await callInstance.join();
-        if (isMounted) setCall(callInstance);
-      }
-    };
-    connect();
-    return () => {
-      isMounted = false;
-      if (call) call.leave();
-      client.disconnectUser();
-    };
-    // eslint-disable-next-line
-  }, [client, userId, userName, token, callId]);
-
-  if (!call) {
-    return (
-      <div style={{ color: "#fff", textAlign: "center", marginTop: "40vh" }}>
-        Đang kết nối cuộc gọi...
-      </div>
-    );
-  }
+  React.useEffect(() => {
+    call.join();
+    return () => call.leave();
+  }, [call]);
 
   return (
-    <StreamCallProvider call={call}>
-      <div style={{ width: "100vw", height: "100vh", background: "#222" }}>
-        <StreamCall>
-          <StreamVideo />
-          <CallParticipantsList />
-          <button
-            style={{
-              position: "absolute",
-              top: 20,
-              right: 20,
-              zIndex: 1000,
-              background: "#e74c3c",
-              color: "#fff",
-              border: "none",
-              borderRadius: "8px",
-              padding: "10px 18px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              fontSize: "16px"
-            }}
-            onClick={onLeave}
-          >
-            Rời cuộc gọi
-          </button>
+    <StreamVideo client={client}>
+      <StreamTheme>
+        <StreamCall call={call}>
+          <CallingState />
+          <CallControls onLeave={onLeave} />
         </StreamCall>
-      </div>
-    </StreamCallProvider>
+      </StreamTheme>
+    </StreamVideo>
   );
 };
 

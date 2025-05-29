@@ -84,6 +84,8 @@ import {
   emitMessageRead,
 } from "../services/socketService";
 import ChatList from "../component/ChatList";
+import { fetchStreamToken } from "../services/callService";
+import ForwardMessageModal from "../component/ForwardMessageModal";
 Modal.setAppElement("#root");
 
 const Home = () => {
@@ -120,6 +122,9 @@ const Home = () => {
   const [videoCallInfo, setVideoCallInfo] = useState(null);
   const [replyTo, setReplyTo] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
+  const [isForwardModalOpen, setIsForwardModalOpen] = useState(false);
+  const [forwardingMessage, setForwardingMessage] = useState(null);
+  const [forwardLoading, setForwardLoading] = useState(false);
 
 
     // Lấy userName từ userInfo hoặc uid
@@ -128,28 +133,57 @@ const Home = () => {
     : uid;
   // Hàm mở video call
   const handleStartVideoCall = async () => {
-  if (!currentChat) return;
-  const streamToken = await fetchStreamToken(uid); // Lấy token từ Node.js service
-  setVideoCallInfo({
-    callId: currentChat.chatId,
-    token: streamToken,
-  });
-  setIsVideoCallOpen(true);
+    if (!currentChat) return;
+    try {
+      const streamToken = await fetchStreamToken(uid);
+      setVideoCallInfo({
+        callId: currentChat.chatId,
+        token: streamToken,
+      });
+      setIsVideoCallOpen(true);
+    } catch (err) {
+      alert("Không lấy được token video call!");
+    }
 };
+
+// Hàm xử lý chuyển tiếp thực sự:
+  const handleForwardMessage = async (selectedList) => {
+    if (!forwardingMessage) {
+      toast.error("Không có tin nhắn để chuyển tiếp!");
+      setIsForwardModalOpen(false);
+      return;
+    }
+    setForwardLoading(true);
+    try {
+      for (const receiver of selectedList) {
+        await fetch("http://localhost:8080/api/messages/forward", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            toUserId: receiver.type === "user" ? receiver.uid : undefined,
+            toGroupId: receiver.type === "group" ? receiver.chatId : undefined,
+            messageId: forwardingMessage.id,
+            fromUserId: uid,
+          }),
+        });
+      }
+      setIsForwardModalOpen(false);
+      setForwardingMessage(null);
+      toast.success("Chuyển tiếp thành công!");
+    } catch (err) {
+      toast.error("Chuyển tiếp thất bại!");
+    } finally {
+      setForwardLoading(false);
+    }
+  };
 
   const handleLeaveVideoCall = () => {
     setIsVideoCallOpen(false);
     setVideoCallInfo(null);
   };
-  const fetchStreamToken = async (userId) => {
-  const res = await fetch("http://localhost:8081/api/stream/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId }),
-  });
-  const data = await res.json();
-  return data.token;
-};
 
 
 // Hàm lấy nội dung và tên người gửi của tin nhắn được trả lời
@@ -427,6 +461,13 @@ const Home = () => {
     navigate("/");
   };
 
+ // Lấy danh sách bạn bè khi vào trang Home hoặc khi uid/token thay đổi
+  useEffect(() => {
+    if (uid && token) {
+      fetchFriends();
+    }
+  }, [uid, token]);
+
   const fetchFriends = async () => {
     if (!uid) {
       console.error("UID không tồn tại trong localStorage.");
@@ -443,7 +484,7 @@ const Home = () => {
       }
       const data = await res.json();
       setFriendList(Array.isArray(data) ? data : []);
-      setShowFriends(true);
+      // Không gọi setShowFriends(true) ở đây!
     } catch (err) {
       console.error("Lỗi lấy danh sách bạn bè:", err);
       setFriendList([]);
@@ -1254,43 +1295,29 @@ const Home = () => {
                       // Sử dụng component MessageItem để render tin nhắn
                       return (
                         <MessageItem
-                          key={msg.id || `msg-${index}`}
-                          message={msg}
-                          isCurrentUser={isCurrentUser}
-                          showAvatar={showAvatar}
-                          participant={
-                            !isCurrentUser ? currentParticipant : userInfo
-                          }
-                          previousSender={
-                            index > 0 ? messages[index - 1].sender : null
-                          }
-                          onReply={(m) => setReplyTo(m)}
-                          messages={messages}
-                          getReplyContent={getReplyContent}
-                          onStartEdit={(msg) => {
-                            setEditingMessage(msg);
-                            setNewMessage(msg.message);
-                            messageInputRef.current?.focus();
-                          }}
-                          getReplyAuthorName={getReplyAuthorName}
-                          onEditMessage={(messageId, newText) => {
-                          setMessages((prev) =>
-                            prev.map((msg) =>
-                              msg.id === messageId
-                                ? { ...msg, message: newText, edited: true }
-                                : msg
-                            )
-                          );
+                        key={msg.id || `msg-${index}`}
+                        message={msg}
+                        isCurrentUser={isCurrentUser}
+                        showAvatar={showAvatar}
+                        participant={
+                          !isCurrentUser ? currentParticipant : userInfo
+                        }
+                        previousSender={
+                          index > 0 ? messages[index - 1].sender : null
+                        }
+                        onReply={(m) => setReplyTo(m)}
+                        messages={messages}
+                        getReplyContent={getReplyContent}
+                        getReplyAuthorName={getReplyAuthorName}
+                        onStartEdit={(msg) => {
+                          setEditingMessage(msg);
+                          setNewMessage(msg.message);
+                          messageInputRef.current?.focus();
                         }}
-                        // onEditMessage={(messageId, newText) => {
-                        //   setMessages((prev) =>
-                        //     prev.map((msg) =>
-                        //       msg.id === messageId
-                        //         ? { ...msg, message: newText, edited: true }
-                        //         : msg
-                        //     )
-                        //   );
-                        // }}
+                        onForward={() => {
+                          setForwardingMessage(msg);
+                          setIsForwardModalOpen(true);
+                        }}
                       />
                       );  
                     })}
@@ -1307,7 +1334,13 @@ const Home = () => {
 
               {/* Hiển thị khung reply phía trên input nếu đang trả lời */}
               {replyTo && (
-                <div className="reply-preview reply-preview-input">
+                <div
+                  className="reply-preview reply-preview-input"
+                  title="Nhấn để xem tin nhắn gốc"
+                  onClick={() => {
+                    // Nếu bạn có messageRefs, thêm scroll-to-reply ở đây
+                  }}
+                >
                   <span className="reply-author">
                     {getReplyAuthorName(replyTo.id)}
                   </span>
@@ -1316,7 +1349,7 @@ const Home = () => {
                   </span>
                   <button
                     className="close-reply-btn"
-                    onClick={() => setReplyTo(null)}
+                    onClick={e => { e.stopPropagation(); setReplyTo(null); }}
                     title="Hủy trả lời"
                   >
                     <FaTimes />
@@ -1325,16 +1358,17 @@ const Home = () => {
               )}
 
               {editingMessage && (
-                <div className="edit-info-bar" style={{ color: "#888", marginBottom: 4 }}>
+                <div className="edit-info-bar">
+                  <FaEdit style={{ marginRight: 10 }} />
                   Đang sửa tin nhắn
                   <button
                     onClick={() => {
                       setEditingMessage(null);
                       setNewMessage("");
                     }}
-                    style={{ marginLeft: 8 }}
+                    title="Hủy sửa"
                   >
-                    Hủy
+                    <FaTimes />
                   </button>
                 </div>
               )}
@@ -1629,6 +1663,14 @@ const Home = () => {
             onLeave={handleLeaveVideoCall}
           />
         )}
+        <ForwardMessageModal
+          isOpen={isForwardModalOpen}
+          onClose={() => setIsForwardModalOpen(false)}
+          friends={friendList.filter(f => f.uid !== uid)}
+          groups={chats.filter(c => c.isGroupChat)}
+          loading={forwardLoading}
+          onForward={handleForwardMessage}
+        />
       </div>
       <Toast />
     </div>
