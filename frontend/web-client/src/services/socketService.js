@@ -7,6 +7,8 @@ export { socket };
 let messageCallbacks = [];
 let chatUpdateCallbacks = [];
 let messageReadCallbacks = [];
+let messageRecalledCallbacks = [];
+let messageEditedCallbacks = [];
 let connectionAttempts = 0;
 const MAX_RECONNECTION_ATTEMPTS = 5;
 
@@ -110,6 +112,14 @@ export const connectSocket = (userId) => {
     socket.on('new_message', (message) => {
       console.log('Nhận tin nhắn mới:', message);
       messageCallbacks.forEach(callback => callback(message));
+    });
+    socket.on('message_recalled', (data) => {
+      console.log('Sự kiện tin nhắn bị thu hồi:', data);
+      messageRecalledCallbacks.forEach(cb => cb(data));
+    });
+    socket.on('message_edited', (data) => {
+      console.log('Sự kiện tin nhắn đã chỉnh sửa:', data);
+      messageEditedCallbacks.forEach(cb => cb(data));
     });
 
     socket.on('chat_updated', (data) => {
@@ -250,4 +260,17 @@ export const reconnectSocket = (userId) => {
   connectionAttempts = 0;
   currentPortIndex = 0;
   return connectSocket(userId);
+};
+
+export const onMessageRecalled = (callback) => {
+  messageRecalledCallbacks.push(callback);
+  return () => {
+    messageRecalledCallbacks = messageRecalledCallbacks.filter(cb => cb !== callback);
+  };
+};
+export const onMessageEdited = (callback) => {
+  messageEditedCallbacks.push(callback);
+  return () => {
+    messageEditedCallbacks = messageEditedCallbacks.filter(cb => cb !== callback);
+  };
 };

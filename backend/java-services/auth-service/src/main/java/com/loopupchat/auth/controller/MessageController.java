@@ -569,43 +569,6 @@ public class MessageController {
         }
     }
 
-    // Thu hồi tin nhắn
-    @PostMapping("/{id}/recall")
-    public ResponseEntity<?> recallMessage(@PathVariable String id, @RequestBody Map<String, Object> body) {
-        String userId = (String) body.get("userId");
-        Firestore firestore = FirestoreClient.getFirestore();
-        DocumentReference msgRef = firestore.collection("messages").document(id);
-
-        try {
-            DocumentSnapshot snapshot = msgRef.get().get();
-            if (!snapshot.exists()) {
-                return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy tin nhắn"));
-            }
-            String sender = (String) snapshot.get("sender");
-            if (!Objects.equals(sender, userId)) {
-                return ResponseEntity.status(403).body(Map.of("error", "Không thể thu hồi"));
-            }
-            Map<String, Object> update = new HashMap<>();
-            update.put("type", "recalled");
-            update.put("message", "Tin nhắn đã được thu hồi");
-            msgRef.update(update);
-            // Lấy chatId để gửi socket
-            String chatId = (String) snapshot.get("chatId");
-            if (chatId != null) {
-                Map<String, Object> recallEvent = new HashMap<>();
-                recallEvent.put("messageId", id);
-                recallEvent.put("chatId", chatId);
-                recallEvent.put("type", "recalled");
-                recallEvent.put("message", "Tin nhắn đã được thu hồi");
-                recallEvent.put("sender", sender);
-                socketIOServer.getRoomOperations(chatId).sendEvent("message_recalled", recallEvent);
-            }
-            return ResponseEntity.ok(Map.of("success", true));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
-        }
-    }
-
     @PostMapping("/forward")
     public ResponseEntity<?> forwardMessage(@RequestBody Map<String, Object> body) {
         String toUserId = (String) body.get("toUserId");
@@ -684,6 +647,60 @@ public class MessageController {
         }
     }
 
+    // Thu hồi tin nhắn
+    @PostMapping("/{id}/recall")
+    public ResponseEntity<?> recallMessage(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        String userId = (String) body.get("userId");
+        Firestore firestore = FirestoreClient.getFirestore();
+        DocumentReference msgRef = firestore.collection("messages").document(id);
+
+        try {
+            DocumentSnapshot snapshot = msgRef.get().get();
+            if (!snapshot.exists()) {
+                return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy tin nhắn"));
+            }
+            String sender = (String) snapshot.get("sender");
+            if (!Objects.equals(sender, userId)) {
+                return ResponseEntity.status(403).body(Map.of("error", "Không thể thu hồi"));
+            }
+            Map<String, Object> update = new HashMap<>();
+            update.put("type", "recalled");
+            update.put("message", "Tin nhắn đã được thu hồi");
+            update.put("editedAt", new Date());
+            msgRef.update(update);
+
+            // Lấy chatId để gửi socket
+            String chatId = (String) snapshot.get("chatId");
+            if (chatId != null) {
+                Map<String, Object> recallEvent = new HashMap<>();
+                recallEvent.put("messageId", id);
+                recallEvent.put("chatId", chatId);
+                recallEvent.put("type", "recalled");
+                recallEvent.put("message", "Tin nhắn đã được thu hồi");
+                recallEvent.put("sender", sender);
+                socketIOServer.getRoomOperations(chatId).sendEvent("message_recalled", recallEvent);
+
+                // Cập nhật lastMessage cho chat
+                DocumentReference chatRef = firestore.collection("chats").document(chatId);
+                chatRef.update("lastMessage", "Tin nhắn đã được thu hồi", "lastUpdated", new Date());
+
+                // Gửi sự kiện cập nhật chat cho tất cả thành viên
+                DocumentSnapshot chatSnap = chatRef.get().get();
+                List<String> participants = (List<String>) chatSnap.get("participants");
+                for (String participant : participants) {
+                    socketIOServer.getRoomOperations("user_" + participant).sendEvent("chat_updated",
+                            Map.of(
+                                    "chatId", chatId,
+                                    "lastMessage", "Tin nhắn đã được thu hồi",
+                                    "lastUpdated", new Date()));
+                }
+            }
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     // Chỉnh sửa tin nhắn
     @PutMapping("/{id}/edit")
     public ResponseEntity<?> editMessage(
@@ -701,10 +718,36 @@ public class MessageController {
             updates.put("edited", true);
             updates.put("editedAt", new Date());
             msgRef.update(updates);
+
+            // Lấy lại dữ liệu tin nhắn để gửi socket
+            DocumentSnapshot msgSnap = msgRef.get().get();
+            String chatId = (String) msgSnap.get("chatId");
+            if (chatId != null) {
+                Map<String, Object> editedEvent = new HashMap<>(msgSnap.getData());
+                editedEvent.put("id", id);
+                socketIOServer.getRoomOperations(chatId).sendEvent("message_edited", editedEvent);
+
+                // Cập nhật lastMessage cho chat
+                DocumentReference chatRef = firestore.collection("chats").document(chatId);
+                chatRef.update("lastMessage", newText, "lastUpdated", new Date());
+
+                // Gửi sự kiện cập nhật chat cho tất cả thành viên
+                DocumentSnapshot chatSnap = chatRef.get().get();
+                List<String> participants = (List<String>) chatSnap.get("participants");
+                for (String participant : participants) {
+                    socketIOServer.getRoomOperations("user_" + participant).sendEvent("chat_updated",
+                            Map.of(
+                                    "chatId", chatId,
+                                    "lastMessage", newText,
+                                    "lastUpdated", new Date()));
+                }
+            }
+
             return ResponseEntity.ok(Map.of("status", "success"));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
+
 }

@@ -82,6 +82,8 @@ import {
   onChatUpdated,
   onMessageRead,
   emitMessageRead,
+  onMessageRecalled,
+  onMessageEdited,
 } from "../services/socketService";
 import ChatList from "../component/ChatList";
 import { fetchStreamToken } from "../services/callService";
@@ -703,6 +705,26 @@ const Home = () => {
   setReplyTo(null);
   setNewMessage("");
 };
+
+useEffect(() => {
+  // Lắng nghe sự kiện thu hồi tin nhắn
+  const unsubRecall = onMessageRecalled((data) => {
+    // Nếu đang ở đúng phòng chat thì reload lại toàn bộ tin nhắn
+    if (currentChat && data.chatId === currentChat.chatId) {
+      loadMessages(currentChat.chatId);
+    }
+  });
+  // Lắng nghe sự kiện chỉnh sửa tin nhắn
+  const unsubEdit = onMessageEdited((data) => {
+    if (currentChat && data.chatId === currentChat.chatId) {
+      loadMessages(currentChat.chatId);
+    }
+  });
+  return () => {
+    unsubRecall();
+    unsubEdit();
+  };
+}, [currentChat, loadMessages]);
 
   const handleChatSelect = useCallback(
     async (chat) => {
